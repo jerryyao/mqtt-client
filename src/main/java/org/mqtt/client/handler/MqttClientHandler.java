@@ -1,27 +1,18 @@
 package org.mqtt.client.handler;
 
-import static org.mqtt.client.message.AbstractMessage.CONNACK;
-import static org.mqtt.client.message.AbstractMessage.PINGRESP;
-import static org.mqtt.client.message.AbstractMessage.PUBACK;
-import static org.mqtt.client.message.AbstractMessage.PUBCOMP;
-import static org.mqtt.client.message.AbstractMessage.PUBLISH;
-import static org.mqtt.client.message.AbstractMessage.PUBREC;
-import static org.mqtt.client.message.AbstractMessage.PUBREL;
-import static org.mqtt.client.message.AbstractMessage.SUBACK;
-import static org.mqtt.client.message.AbstractMessage.UNSUBACK;
-
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.util.CharsetUtil;
 import org.mqtt.client.event.EventKey;
 import org.mqtt.client.event.EventManager;
 import org.mqtt.client.event.EventType;
 import org.mqtt.client.message.*;
-import org.mqtt.client.message.AbstractMessage.QOSType;
+import org.mqtt.client.message.AbstractMessage.*;
 import org.mqtt.client.util.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.util.CharsetUtil;
+import static org.mqtt.client.message.AbstractMessage.*;
 
 /**
  * Created by pactera on 2016/11/17.

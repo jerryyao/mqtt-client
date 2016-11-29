@@ -1,5 +1,9 @@
 package org.mqtt.client.event;
 
+import org.mqtt.client.message.AbstractMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -8,46 +12,42 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.mqtt.client.message.AbstractMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * 一个简单的事件通知组件
- * 
+ * <p>
  * Created by pactera on 2016/11/17.
  */
 public class EventManager {
-	private static ConcurrentMap<EventKey, List<EventCallback>> listenerMap = new ConcurrentHashMap<>();
-	private static ExecutorService executor = Executors.newCachedThreadPool();
-	private static Logger log = LoggerFactory.getLogger(EventManager.class);
+    private static ConcurrentMap<EventKey, List<EventCallback>> listenerMap = new ConcurrentHashMap<>();
+    private static ExecutorService executor = Executors.newCachedThreadPool();
+    private static Logger log = LoggerFactory.getLogger(EventManager.class);
 
-	public static void register(EventKey key, EventCallback callback) {
-		if (listenerMap.containsKey(key))
-			listenerMap.get(key).add(callback);
-		else
-			listenerMap.put(key, new ArrayList<>(Arrays.asList(callback)));
+    public static void register(EventKey key, EventCallback callback) {
+        if (listenerMap.containsKey(key))
+            listenerMap.get(key).add(callback);
+        else
+            listenerMap.put(key, new ArrayList<>(Arrays.asList(callback)));
 
-		log.debug("event {} registed.", key);
-	}
+        log.debug("event {} registed.", key);
+    }
 
-	public static void unRegister(EventKey key) {
-		if (listenerMap.containsKey(key)) {
-			listenerMap.remove(key);
-			log.debug("event {} unregisted.", key);
-		} else {
+    public static void unRegister(EventKey key) {
+        if (listenerMap.containsKey(key)) {
+            listenerMap.remove(key);
+            log.debug("event {} unregisted.", key);
+        } else {
 //			log.debug("no listener registed with key : {}", key);
-		}
-	}
+        }
+    }
 
-	public static void notify(EventKey key, AbstractMessage msg) {
-		log.debug("notify event {}", key);
-		if (!listenerMap.containsKey(key))
-			return;
+    public static void notify(EventKey key, AbstractMessage msg) {
+        log.debug("notify event {}", key);
+        if (!listenerMap.containsKey(key))
+            return;
 
-		List<EventCallback> callbackList = listenerMap.get(key);
-		for (EventCallback callback : callbackList) {
-			executor.submit(() -> callback.callback(msg));
-		}
-	}
+        List<EventCallback> callbackList = listenerMap.get(key);
+        for (EventCallback callback : callbackList) {
+            executor.submit(() -> callback.callback(msg));
+        }
+    }
 }

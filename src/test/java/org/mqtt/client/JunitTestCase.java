@@ -1,6 +1,7 @@
-package org.mqtt;
+package org.mqtt.client;
 
 import io.netty.util.CharsetUtil;
+import org.junit.Test;
 import org.mqtt.client.MqttClient;
 import org.mqtt.client.MqttClientFactory;
 import org.mqtt.client.event.EventListener;
@@ -9,8 +10,6 @@ import org.mqtt.client.message.PublishMessage;
 import org.mqtt.client.util.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -20,18 +19,20 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 
-@SpringBootApplication
-public class MqttClientApplication {
+public class JunitTestCase {
 
-    private static volatile AtomicInteger statistics = new AtomicInteger(0);
-    private static volatile Logger log = LoggerFactory.getLogger(MqttClientApplication.class);
+    Logger log = LoggerFactory.getLogger(getClass());
 
-    public static void main(String[] args) throws Exception {
-        SpringApplication.run(MqttClientApplication.class, args);
-        pressureTest();
-        // functionalTest();
+
+    @Test
+    public void heartbeat() {
+        MqttClient c = new MqttClient();
+        c.connect();
+
+        while (true) {
+
+        }
     }
 
     public static void pressureTest() {
@@ -56,7 +57,7 @@ public class MqttClientApplication {
         }
     }
 
-    public static void functionalTest() throws Exception {
+    public void functionalTest() throws Exception {
 
         List<MqttClient> clientList = new ArrayList<>();
 
@@ -163,7 +164,7 @@ public class MqttClientApplication {
         }
     }
 
-    private static String randomTopic(String[] topic, boolean allowWildcard) {
+    private String randomTopic(String[] topic, boolean allowWildcard) {
         int topicIndex = new Random(System.currentTimeMillis()).nextInt(topic.length - 1);
         topicIndex = topicIndex == 0 ? 1 : topicIndex;
         StringBuilder builder = new StringBuilder();
@@ -189,5 +190,90 @@ public class MqttClientApplication {
         }
 
         return builder.toString();
+    }
+
+    // @Test
+    public void duplicateConnect() {
+        MqttClient client = new MqttClient();
+        client.connect();
+        client.connect();
+    }
+
+    //    @Test
+    public void duplicateClientID() {
+
+        try {
+            MqttClient client1 = new MqttClient();
+            MqttClient client2 = new MqttClient();
+            client2.setClientId(client1.getClientId());
+
+            client1.connect();
+            client2.connect();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // @Test
+    public void wildcard() {
+        MqttClient client = new MqttClient();
+        client.setListener(new EventListener() {
+
+            /*
+             * (non-Javadoc)
+             *
+             * @see
+             * org.mqtt.client.event.EventListener#messageArrive(org.mqtt.client
+             * .message.PublishMessage)
+             */
+            @Override
+            public void messageArrive(PublishMessage msg) {
+                byte[] bytes = new byte[msg.getPayload().remaining()];
+                msg.getPayload().get(bytes);
+                System.err.println(new String(bytes));
+                log.error("3333333333333");
+            }
+
+            /*
+             * (non-Javadoc)
+             *
+             * @see org.mqtt.client.event.EventListener#connectSuccess()
+             */
+            @Override
+            public void connectSuccess() {
+                // log.error("1111111111");
+            }
+
+            /*
+             * (non-Javadoc)
+             *
+             * @see org.mqtt.client.event.EventListener#publishSuccess()
+             */
+            @Override
+            public void publishSuccess() {
+                // log.error("2222222222222222");
+            }
+
+        });
+
+        client.connect();
+
+        client.subscribe("boot/+", QOSType.LEAST_ONE);
+
+        client.publish("boot", QOSType.LEAST_ONE, "boot root content");
+
+        client.publish("boot/test", QOSType.LEAST_ONE, "boot sub content");
+        client.publish("boot/spring", QOSType.LEAST_ONE, "boot spring content");
+
+        // client.subscribe("boot/#", QOSType.LEAST_ONE.byteValue());
+        //
+        // client.publish("boot", QOSType.LEAST_ONE.byteValue(), "boot first
+        // content");
+        //
+        // client.publish("boot/second", QOSType.LEAST_ONE.byteValue(), "boot
+        // second content");
+        //
+        // client.publish("boot/second/three", QOSType.LEAST_ONE.byteValue(),
+        // "boot third content");
     }
 }

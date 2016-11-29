@@ -15,22 +15,16 @@
  */
 package org.mqtt.client.parser;
 
-import java.util.List;
-
-import org.mqtt.client.message.DisconnectMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.util.AttributeMap;
+import org.mqtt.client.message.DisconnectMessage;
+
+import java.util.List;
 
 /**
- *
  * @author andrea
  */
 class DisconnectDecoder extends DemuxDecoder {
-
-    private static Logger LOG = LoggerFactory.getLogger(DisconnectDecoder.class);
 
     @Override
     void decode(AttributeMap ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -41,8 +35,7 @@ class DisconnectDecoder extends DemuxDecoder {
             in.resetReaderIndex();
             return;
         }
-        LOG.debug("Decoding disconnect");
         out.add(message);
     }
-    
+
 }

@@ -15,53 +15,46 @@
  */
 package org.mqtt.client.parser;
 
-import java.util.List;
-
-import org.mqtt.client.message.AbstractMessage;
-import org.mqtt.client.message.PublishMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.util.AttributeMap;
+import org.mqtt.client.message.AbstractMessage;
+import org.mqtt.client.message.PublishMessage;
+
+import java.util.List;
 
 /**
- *
  * @author andrea
  */
 class PublishDecoder extends DemuxDecoder {
-    
-    private static Logger LOG = LoggerFactory.getLogger(PublishDecoder.class);
+
 
     @Override
     void decode(AttributeMap ctx, ByteBuf in, List<Object> out) throws Exception {
-        LOG.debug("decode invoked with buffer {}", in);
         in.resetReaderIndex();
         int startPos = in.readerIndex();
 
         //Common decoding part
         PublishMessage message = new PublishMessage();
         if (!decodeCommonHeader(message, in)) {
-            LOG.debug("decode ask for more data after {}", in);
             in.resetReaderIndex();
             return;
         }
-        
+
         if (Utils.isMQTT3_1_1(ctx)) {
             if (message.getQos() == AbstractMessage.QOSType.MOST_ONE && message.isDupFlag()) {
                 //bad protocol, if QoS=0 => DUP = 0
                 throw new CorruptedFrameException("Received a PUBLISH with QoS=0 & DUP = 1, MQTT 3.1.1 violation");
             }
-            
+
             if (message.getQos() == AbstractMessage.QOSType.RESERVED) {
                 throw new CorruptedFrameException("Received a PUBLISH with QoS flags setted 10 b11, MQTT 3.1.1 violation");
             }
         }
-        
+
         int remainingLength = message.getRemainingLength();
-        
+
         //Topic name
         String topic = Utils.decodeString(in);
         if (topic == null) {
@@ -76,15 +69,15 @@ class PublishDecoder extends DemuxDecoder {
         if (topic.length() == 0) {
             throw new CorruptedFrameException("Received a PUBLISH with topic without any character");
         }
-        
+
         message.setTopicName(topic);
-        
-        if (message.getQos() == AbstractMessage.QOSType.LEAST_ONE || 
+
+        if (message.getQos() == AbstractMessage.QOSType.LEAST_ONE ||
                 message.getQos() == AbstractMessage.QOSType.EXACTLY_ONCE) {
             message.setMessageID(in.readUnsignedShort());
         }
         int stopPos = in.readerIndex();
-        
+
         //read the payload
         int payloadSize = remainingLength - (stopPos - startPos - 2) + (Utils.numBytesToEncode(remainingLength) - 1);
         if (in.readableBytes() < payloadSize) {
@@ -94,9 +87,9 @@ class PublishDecoder extends DemuxDecoder {
         ByteBuf bb = Unpooled.buffer(payloadSize);
         in.readBytes(bb);
         message.setPayload(bb.nioBuffer());
-        
+
         out.add(message);
 
     }
-    
+
 }

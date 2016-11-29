@@ -1,12 +1,8 @@
 package org.mqtt.client;
 
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
+import io.netty.util.CharsetUtil;
 import org.mqtt.client.event.EventKey;
 import org.mqtt.client.event.EventListener;
 import org.mqtt.client.event.EventManager;
@@ -16,9 +12,12 @@ import org.mqtt.client.util.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.util.CharsetUtil;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 
 public class MqttClient {
 

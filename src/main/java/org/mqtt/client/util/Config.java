@@ -32,7 +32,7 @@ public class Config {
 	public static final byte qos;
 
 	static {
-		InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream("application.yml");
+		InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream("config.yml");
 		Constructor constructor = new Constructor();
 		PropertyUtils util = new PropertyUtils();
 		util.setSkipMissingProperties(true);

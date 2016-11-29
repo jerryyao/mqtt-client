@@ -1,7 +1,7 @@
 connection_num: 1000
 connection_num_per_thread: 50
 message_num_per_connection: 1
-keep_alive: 600
+keep_alive: 5
 username: null
 password: null
 # iot.eclipse.org
@@ -14,5 +14,5 @@ qos: 1
 
 # logging
 logging.level.root: WARN
-logging.level.org.mqtt: ERROR
+logging.level.org.mqtt: debug
 #logging.path: D:\\WorkData\\log

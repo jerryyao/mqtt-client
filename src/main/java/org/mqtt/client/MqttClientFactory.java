@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.handler.timeout.IdleStateHandler;
 import org.mqtt.client.handler.MqttClientHandler;
-import org.mqtt.client.handler.TimeOutHandler;
+import org.mqtt.client.handler.HeartBeatHandler;
 import org.mqtt.client.parser.MQTTDecoder;
 import org.mqtt.client.parser.MQTTEncoder;
 import org.mqtt.client.util.Config;
@@ -50,7 +50,7 @@ public class MqttClientFactory {
 				@Override
 				public void initChannel(SocketChannel ch) throws Exception {
 					ChannelPipeline pipeline = ch.pipeline();
-					pipeline.addFirst(new TimeOutHandler());
+					pipeline.addFirst(new HeartBeatHandler());
 					pipeline.addFirst(new IdleStateHandler(0,0,Config.keep_alive));
 					pipeline.addLast(new MQTTDecoder());
 					pipeline.addLast(new MQTTEncoder());
