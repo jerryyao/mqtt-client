@@ -15,14 +15,12 @@
  */
 package org.mqtt.client.parser;
 
-import org.mqtt.client.message.AbstractMessage;
-import org.mqtt.client.message.PubAckMessage;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import org.mqtt.client.message.MessageType;
+import org.mqtt.client.message.PubAckMessage;
 
 /**
- *
  * @author andrea
  */
 class PubAckEncoder extends DemuxEncoder<PubAckMessage> {
@@ -31,7 +29,7 @@ class PubAckEncoder extends DemuxEncoder<PubAckMessage> {
     protected void encode(ChannelHandlerContext chc, PubAckMessage msg, ByteBuf out) {
         ByteBuf buff = chc.alloc().buffer(4);
         try {
-            buff.writeByte(AbstractMessage.PUBACK << 4);
+            buff.writeByte(MessageType.PUBACK << 4);
             buff.writeBytes(Utils.encodeRemainingLength(2));
             buff.writeShort(msg.getMessageID());
             out.writeBytes(buff);
@@ -39,5 +37,5 @@ class PubAckEncoder extends DemuxEncoder<PubAckMessage> {
             buff.release();
         }
     }
-    
+
 }

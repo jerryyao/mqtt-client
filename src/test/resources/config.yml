@@ -1,11 +1,11 @@
 connection_num: 1000
 connection_num_per_thread: 50
 message_num_per_connection: 1
-keep_alive: 5
+keep_alive: 60
 username: null
 password: null
 # iot.eclipse.org
-server_url: iot.eclipse.org
+server_url: localhost
 server_port: 1883
 server_protocol: tcp
 publish_topic: paho/iot/10086

@@ -23,6 +23,6 @@ package org.mqtt.client.message;
 public class PubAckMessage extends MessageIDMessage {
     
     public PubAckMessage() {
-        m_messageType = PUBACK;
+        m_messageType = MessageType.PUBACK;
     }
 }

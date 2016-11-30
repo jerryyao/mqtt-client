@@ -15,16 +15,14 @@
  */
 package org.mqtt.client.parser;
 
-import java.util.List;
-
-import org.mqtt.client.message.AbstractMessage;
-import org.mqtt.client.message.SubAckMessage;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.util.AttributeMap;
+import org.mqtt.client.message.QOSType;
+import org.mqtt.client.message.SubAckMessage;
+
+import java.util.List;
 
 /**
- *
  * @author andrea
  */
 class SubAckDecoder extends DemuxDecoder {
@@ -39,22 +37,22 @@ class SubAckDecoder extends DemuxDecoder {
             return;
         }
         int remainingLength = message.getRemainingLength();
-        
+
         //MessageID
         message.setMessageID(in.readUnsignedShort());
         remainingLength -= 2;
-        
+
         //Qos array
-        if (in.readableBytes() < remainingLength ) {
+        if (in.readableBytes() < remainingLength) {
             in.resetReaderIndex();
             return;
         }
         for (int i = 0; i < remainingLength; i++) {
             byte qos = in.readByte();
-            message.addType(AbstractMessage.QOSType.valueOf(qos));
+            message.addType(QOSType.valueOf(qos));
         }
-        
+
         out.add(message);
     }
-    
+
 }

@@ -17,7 +17,7 @@ package org.mqtt.client.message;
 
 /**
  * The attributes Qos, Dup and Retain aren't used.
- * 
+ *
  * @author andrea
  */
 public class ConnAckMessage extends AbstractMessage {
@@ -27,12 +27,12 @@ public class ConnAckMessage extends AbstractMessage {
     public static final byte SERVER_UNAVAILABLE = 0x03;
     public static final byte BAD_USERNAME_OR_PASSWORD = 0x04;
     public static final byte NOT_AUTHORIZED = 0x05;
-    
+
     private byte m_returnCode;
     private boolean sessionPresent;
-    
+
     public ConnAckMessage() {
-        m_messageType = CONNACK;
+        m_messageType = MessageType.CONNACK;
     }
 
     public byte getReturnCode() {

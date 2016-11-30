@@ -4,8 +4,8 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
+import org.mqtt.client.MqttClientOption;
 import org.mqtt.client.message.PingReqMessage;
-import org.mqtt.client.util.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +22,7 @@ public class HeartBeatHandler extends ChannelDuplexHandler {
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof IdleStateEvent && ((IdleStateEvent) evt).state() == IdleState.ALL_IDLE) {
             ctx.channel().writeAndFlush(new PingReqMessage());
-            log.debug("send heartbeat : {}", ctx.channel().attr(Config.CLIENT_ID).get());
+            log.debug("send heartbeat : {}", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
         } else {
             ctx.fireUserEventTriggered(evt);
         }

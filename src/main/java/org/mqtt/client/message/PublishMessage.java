@@ -18,7 +18,6 @@ package org.mqtt.client.message;
 import java.nio.ByteBuffer;
 
 /**
- *
  * @author andrea
  */
 public class PublishMessage extends MessageIDMessage {
@@ -30,7 +29,7 @@ public class PublishMessage extends MessageIDMessage {
     protected ByteBuffer m_payload;
 
     public PublishMessage() {
-        m_messageType = AbstractMessage.PUBLISH;
+        m_messageType = MessageType.PUBLISH;
     }
 
     public String getTopicName() {

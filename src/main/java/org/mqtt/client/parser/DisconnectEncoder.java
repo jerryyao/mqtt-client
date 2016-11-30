@@ -15,21 +15,19 @@
  */
 package org.mqtt.client.parser;
 
-import org.mqtt.client.message.AbstractMessage;
-import org.mqtt.client.message.DisconnectMessage;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import org.mqtt.client.message.DisconnectMessage;
+import org.mqtt.client.message.MessageType;
 
 /**
- *
  * @author andrea
  */
 public class DisconnectEncoder extends DemuxEncoder<DisconnectMessage> {
 
     @Override
     protected void encode(ChannelHandlerContext chc, DisconnectMessage msg, ByteBuf out) {
-        out.writeByte(AbstractMessage.DISCONNECT << 4).writeByte(0);
+        out.writeByte(MessageType.DISCONNECT << 4).writeByte(0);
     }
-    
+
 }

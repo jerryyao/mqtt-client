@@ -26,15 +26,16 @@ import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.AttributeMap;
+import org.mqtt.client.message.MessageType;
+import org.mqtt.client.message.QOSType;
 
 /**
- *
  * @author andrea
  */
 public class ConnectDecoder extends DemuxDecoder {
 
     static final AttributeKey<Boolean> CONNECT_STATUS = AttributeKey.valueOf("connected");
-    
+
     @Override
     void decode(AttributeMap ctx, ByteBuf in, List<Object> out) throws UnsupportedEncodingException {
         in.resetReaderIndex();
@@ -59,7 +60,7 @@ public class ConnectDecoder extends DemuxDecoder {
                     in.resetReaderIndex();
                     return;
                 }
-                
+
                 encProtoName = new byte[6];
                 in.readBytes(encProtoName);
                 protoName = new String(encProtoName, "UTF-8");
@@ -68,7 +69,7 @@ public class ConnectDecoder extends DemuxDecoder {
                     throw new CorruptedFrameException("Invalid protoName: " + protoName);
                 }
                 message.setProtocolName(protoName);
-                
+
                 versionAttr.set((int) Utils.VERSION_3_1);
                 break;
             case 4:
@@ -92,15 +93,15 @@ public class ConnectDecoder extends DemuxDecoder {
                 //protocol broken
                 throw new CorruptedFrameException("Invalid protoName size: " + protocolNameLen);
         }
-        
+
         //ProtocolVersion 1 byte (value 0x03 for 3.1, 0x04 for 3.1.1)
         message.setProtocolVersion(in.readByte());
         if (message.getProtocolVersion() == Utils.VERSION_3_1_1) {
             //if 3.1.1, check the flags (dup, retain and qos == 0)
-            if (message.isDupFlag() || message.isRetainFlag() || message.getQos() != AbstractMessage.QOSType.MOST_ONE) {
+            if (message.isDupFlag() || message.isRetainFlag() || message.getQos() != QOSType.MOST_ONE) {
                 throw new CorruptedFrameException("Received a CONNECT with fixed header flags != 0");
             }
-            
+
             //check if this is another connect from the same client on the same session
             Attribute<Boolean> connectAttr = ctx.attr(ConnectDecoder.CONNECT_STATUS);
             Boolean alreadyConnected = connectAttr.get();
@@ -148,7 +149,7 @@ public class ConnectDecoder extends DemuxDecoder {
         message.setKeepAlive(keepAlive);
 
         if ((remainingLength == 12 && message.getProtocolVersion() == Utils.VERSION_3_1) ||
-            (remainingLength == 10 && message.getProtocolVersion() == Utils.VERSION_3_1_1)) {
+                (remainingLength == 10 && message.getProtocolVersion() == Utils.VERSION_3_1_1)) {
             out.add(message);
             return;
         }
@@ -217,5 +218,5 @@ public class ConnectDecoder extends DemuxDecoder {
 
         out.add(message);
     }
-    
+
 }

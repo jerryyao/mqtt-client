@@ -15,21 +15,19 @@
  */
 package org.mqtt.client.parser;
 
-import org.mqtt.client.message.AbstractMessage;
-import org.mqtt.client.message.UnsubAckMessage;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import org.mqtt.client.message.MessageType;
+import org.mqtt.client.message.UnsubAckMessage;
 
 /**
- *
  * @author andrea
  */
 class UnsubAckEncoder extends DemuxEncoder<UnsubAckMessage> {
-    
+
     @Override
     protected void encode(ChannelHandlerContext chc, UnsubAckMessage msg, ByteBuf out) {
-        out.writeByte(AbstractMessage.UNSUBACK << 4).
+        out.writeByte(MessageType.UNSUBACK << 4).
                 writeBytes(Utils.encodeRemainingLength(2)).
                 writeShort(msg.getMessageID());
     }

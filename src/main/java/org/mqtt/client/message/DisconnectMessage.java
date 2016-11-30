@@ -23,6 +23,6 @@ package org.mqtt.client.message;
 public class DisconnectMessage extends ZeroLengthMessage {
     
     public DisconnectMessage() {
-        m_messageType = DISCONNECT;
+        m_messageType = MessageType.DISCONNECT;
     }
 }

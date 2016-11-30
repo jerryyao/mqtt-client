@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
  * @author andrea
  */
 public class SubscribeMessage extends MessageIDMessage {
@@ -33,16 +32,17 @@ public class SubscribeMessage extends MessageIDMessage {
             this.qos = qos;
             this.topicFilter = topic;
         }
-        
+
     }
+
     private List<Couple> m_subscriptions = new ArrayList<>();
 
     public SubscribeMessage() {
         //Subscribe has always QoS 1
-        m_messageType = AbstractMessage.SUBSCRIBE;
-        m_qos = AbstractMessage.QOSType.LEAST_ONE;
+        m_messageType = MessageType.SUBSCRIBE;
+        m_qos = QOSType.LEAST_ONE;
     }
-    
+
     public List<Couple> subscriptions() {
         return m_subscriptions;
     }

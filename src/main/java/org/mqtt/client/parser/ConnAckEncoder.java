@@ -15,24 +15,22 @@
  */
 package org.mqtt.client.parser;
 
-import org.mqtt.client.message.AbstractMessage;
-import org.mqtt.client.message.ConnAckMessage;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import org.mqtt.client.message.ConnAckMessage;
+import org.mqtt.client.message.MessageType;
 
 /**
- *
  * @author andrea
  */
-class ConnAckEncoder extends DemuxEncoder<ConnAckMessage>{
+class ConnAckEncoder extends DemuxEncoder<ConnAckMessage> {
 
     @Override
     protected void encode(ChannelHandlerContext chc, ConnAckMessage message, ByteBuf out) {
-        out.writeByte(AbstractMessage.CONNACK << 4);
+        out.writeByte(MessageType.CONNACK << 4);
         out.writeBytes(Utils.encodeRemainingLength(2));
         out.writeByte(message.isSessionPresent() ? 0x01 : 0x00);
         out.writeByte(message.getReturnCode());
     }
-    
+
 }

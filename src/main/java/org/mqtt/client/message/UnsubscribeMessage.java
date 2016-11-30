@@ -19,14 +19,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
  * @author andrea
  */
 public class UnsubscribeMessage extends MessageIDMessage {
     List<String> m_types = new ArrayList<String>();
-    
+
     public UnsubscribeMessage() {
-        m_messageType = UNSUBSCRIBE;
+        m_messageType = MessageType.UNSUBSCRIBE;
     }
 
     public List<String> topicFilters() {

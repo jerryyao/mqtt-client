@@ -15,14 +15,12 @@
  */
 package org.mqtt.client.parser;
 
-import org.mqtt.client.message.AbstractMessage;
-import org.mqtt.client.message.ConnectMessage;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import org.mqtt.client.message.ConnectMessage;
+import org.mqtt.client.message.MessageType;
 
 /**
- *
  * @author andrea
  */
 public class ConnectEncoder extends DemuxEncoder<ConnectMessage> {
@@ -77,7 +75,7 @@ public class ConnectEncoder extends DemuxEncoder<ConnectMessage> {
             }
 
             int variableHeaderSize = variableHeaderBuff.readableBytes();
-            buff.writeByte(AbstractMessage.CONNECT << 4);
+            buff.writeByte(MessageType.CONNECT << 4);
             buff.writeBytes(Utils.encodeRemainingLength(12 + variableHeaderSize));
             buff.writeBytes(staticHeaderBuff).writeBytes(variableHeaderBuff);
 
@@ -88,5 +86,5 @@ public class ConnectEncoder extends DemuxEncoder<ConnectMessage> {
             variableHeaderBuff.release();
         }
     }
-    
+
 }

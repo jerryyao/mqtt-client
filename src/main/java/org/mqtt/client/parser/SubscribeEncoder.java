@@ -15,28 +15,27 @@
  */
 package org.mqtt.client.parser;
 
-import org.mqtt.client.message.AbstractMessage;
-import org.mqtt.client.message.SubscribeMessage;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import org.mqtt.client.message.MessageType;
+import org.mqtt.client.message.QOSType;
+import org.mqtt.client.message.SubscribeMessage;
 
 /**
- *
  * @author andrea
  */
 class SubscribeEncoder extends DemuxEncoder<SubscribeMessage> {
 
     @Override
     protected void encode(ChannelHandlerContext chc, SubscribeMessage message, ByteBuf out) {
-         if (message.subscriptions().isEmpty()) {
+        if (message.subscriptions().isEmpty()) {
             throw new IllegalArgumentException("Found a subscribe message with empty topics");
-        }	
+        }
 
-        if (message.getQos() != AbstractMessage.QOSType.LEAST_ONE) {
+        if (message.getQos() != QOSType.LEAST_ONE) {
             throw new IllegalArgumentException("Expected a message with QOS 1, found " + message.getQos());
         }
-        
+
         ByteBuf variableHeaderBuff = chc.alloc().buffer(4);
         ByteBuf buff = null;
         try {
@@ -50,15 +49,15 @@ class SubscribeEncoder extends DemuxEncoder<SubscribeMessage> {
             byte flags = Utils.encodeFlags(message);
             buff = chc.alloc().buffer(2 + variableHeaderSize);
 
-            buff.writeByte(AbstractMessage.SUBSCRIBE << 4 | flags);
+            buff.writeByte(MessageType.SUBSCRIBE << 4 | flags);
             buff.writeBytes(Utils.encodeRemainingLength(variableHeaderSize));
             buff.writeBytes(variableHeaderBuff);
 
             out.writeBytes(buff);
         } finally {
-             variableHeaderBuff.release();
-             buff.release();
+            variableHeaderBuff.release();
+            buff.release();
         }
     }
-    
+
 }

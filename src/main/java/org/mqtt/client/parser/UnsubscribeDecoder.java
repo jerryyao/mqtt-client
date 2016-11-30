@@ -15,17 +15,15 @@
  */
 package org.mqtt.client.parser;
 
-import java.util.List;
-
-import org.mqtt.client.message.AbstractMessage;
-import org.mqtt.client.message.UnsubscribeMessage;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.util.AttributeMap;
+import org.mqtt.client.message.QOSType;
+import org.mqtt.client.message.UnsubscribeMessage;
+
+import java.util.List;
 
 /**
- *
  * @author andrea
  */
 class UnsubscribeDecoder extends DemuxDecoder {
@@ -39,12 +37,12 @@ class UnsubscribeDecoder extends DemuxDecoder {
             in.resetReaderIndex();
             return;
         }
-        
+
         //check qos level
-        if (message.getQos() != AbstractMessage.QOSType.LEAST_ONE) {
+        if (message.getQos() != QOSType.LEAST_ONE) {
             throw new CorruptedFrameException("Found an Unsubscribe message with qos other than LEAST_ONE, was: " + message.getQos());
         }
-            
+
         int start = in.readerIndex();
         //read  messageIDs
         message.setMessageID(in.readUnsignedShort());
@@ -63,5 +61,5 @@ class UnsubscribeDecoder extends DemuxDecoder {
         }
         out.add(message);
     }
-    
+
 }

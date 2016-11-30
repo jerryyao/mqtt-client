@@ -15,21 +15,19 @@
  */
 package org.mqtt.client.parser;
 
-import org.mqtt.client.message.AbstractMessage;
-import org.mqtt.client.message.PubRelMessage;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import org.mqtt.client.message.MessageType;
+import org.mqtt.client.message.PubRelMessage;
 
 /**
- *
  * @author andrea
  */
 class PubRelEncoder extends DemuxEncoder<PubRelMessage> {
 
     @Override
     protected void encode(ChannelHandlerContext chc, PubRelMessage msg, ByteBuf out) {
-        out.writeByte(AbstractMessage.PUBREL << 4 | 0x02);
+        out.writeByte(MessageType.PUBREL << 4 | 0x02);
         out.writeBytes(Utils.encodeRemainingLength(2));
         out.writeShort(msg.getMessageID());
     }

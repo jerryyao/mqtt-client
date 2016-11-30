@@ -15,21 +15,20 @@
  */
 package org.mqtt.client.parser;
 
-import java.util.List;
-
-import org.mqtt.client.message.AbstractMessage;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.util.AttributeMap;
+import org.mqtt.client.message.AbstractMessage;
+import org.mqtt.client.message.QOSType;
+
+import java.util.List;
 
 /**
- *
  * @author andrea
  */
 abstract class DemuxDecoder {
     abstract void decode(AttributeMap ctx, ByteBuf in, List<Object> out) throws Exception;
-    
+
     /**
      * Decodes the first 2 bytes of the MQTT packet.
      * The first byte contain the packet operation code and the flags,
@@ -38,15 +37,15 @@ abstract class DemuxDecoder {
     protected boolean decodeCommonHeader(AbstractMessage message, ByteBuf in) {
         return genericDecodeCommonHeader(message, null, in);
     }
-    
+
     /**
      * Do the same as the @see#decodeCommonHeader but having a strong validation on the flags values
      */
     protected boolean decodeCommonHeader(AbstractMessage message, int expectedFlags, ByteBuf in) {
         return genericDecodeCommonHeader(message, expectedFlags, in);
     }
-    
-    
+
+
     private boolean genericDecodeCommonHeader(AbstractMessage message, Integer expectedFlagsOpt, ByteBuf in) {
         //Common decoding part
         if (in.readableBytes() < 2) {
@@ -54,7 +53,7 @@ abstract class DemuxDecoder {
         }
         byte h1 = in.readByte();
         byte messageType = (byte) ((h1 & 0x00F0) >> 4);
-        
+
         byte flags = (byte) (h1 & 0x0F);
         if (expectedFlagsOpt != null) {
             int expectedFlags = expectedFlagsOpt;
@@ -64,7 +63,7 @@ abstract class DemuxDecoder {
                 throw new CorruptedFrameException(String.format("Received a message with fixed header flags (%s) != expected (%s)", hexReceived, hexExpected));
             }
         }
-        
+
         boolean dupFlag = ((byte) ((h1 & 0x0008) >> 3) == 1);
         byte qosLevel = (byte) ((h1 & 0x0006) >> 1);
         boolean retainFlag = ((byte) (h1 & 0x0001) == 1);
@@ -76,8 +75,8 @@ abstract class DemuxDecoder {
         message.setMessageType(messageType);
         message.setDupFlag(dupFlag);
         try {
-            message.setQos(AbstractMessage.QOSType.valueOf(qosLevel));
-        } catch(IllegalArgumentException e) {
+            message.setQos(QOSType.valueOf(qosLevel));
+        } catch (IllegalArgumentException e) {
             throw new CorruptedFrameException(String.format("Received an invalid QOS: %s", e.getMessage()), e);
         }
         message.setRetainFlag(retainFlag);

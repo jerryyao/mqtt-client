@@ -15,21 +15,19 @@
  */
 package org.mqtt.client.parser;
 
-import org.mqtt.client.message.AbstractMessage;
-import org.mqtt.client.message.PubCompMessage;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import org.mqtt.client.message.MessageType;
+import org.mqtt.client.message.PubCompMessage;
 
 /**
- *
  * @author andrea
  */
 class PubCompEncoder extends DemuxEncoder<PubCompMessage> {
 
     @Override
     protected void encode(ChannelHandlerContext chc, PubCompMessage msg, ByteBuf out) {
-        out.writeByte(AbstractMessage.PUBCOMP << 4);
+        out.writeByte(MessageType.PUBCOMP << 4);
         out.writeBytes(Utils.encodeRemainingLength(2));
         out.writeShort(msg.getMessageID());
     }

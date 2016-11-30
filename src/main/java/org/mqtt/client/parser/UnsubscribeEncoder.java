@@ -15,15 +15,14 @@
  */
 package org.mqtt.client.parser;
 
-import org.mqtt.client.message.AbstractMessage;
-import org.mqtt.client.message.UnsubscribeMessage;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import org.mqtt.client.message.MessageType;
+import org.mqtt.client.message.QOSType;
+import org.mqtt.client.message.UnsubscribeMessage;
 
 
 /**
- *
  * @author andrea
  */
 class UnsubscribeEncoder extends DemuxEncoder<UnsubscribeMessage> {
@@ -34,10 +33,10 @@ class UnsubscribeEncoder extends DemuxEncoder<UnsubscribeMessage> {
             throw new IllegalArgumentException("Found an unsubscribe message with empty topics");
         }
 
-        if (message.getQos() != AbstractMessage.QOSType.LEAST_ONE) {
+        if (message.getQos() != QOSType.LEAST_ONE) {
             throw new IllegalArgumentException("Expected a message with QOS 1, found " + message.getQos());
         }
-        
+
         ByteBuf variableHeaderBuff = chc.alloc().buffer(4);
         ByteBuf buff = null;
         try {
@@ -50,7 +49,7 @@ class UnsubscribeEncoder extends DemuxEncoder<UnsubscribeMessage> {
             byte flags = Utils.encodeFlags(message);
             buff = chc.alloc().buffer(2 + variableHeaderSize);
 
-            buff.writeByte(AbstractMessage.UNSUBSCRIBE << 4 | flags);
+            buff.writeByte(MessageType.UNSUBSCRIBE << 4 | flags);
             buff.writeBytes(Utils.encodeRemainingLength(variableHeaderSize));
             buff.writeBytes(variableHeaderBuff);
 
@@ -60,5 +59,5 @@ class UnsubscribeEncoder extends DemuxEncoder<UnsubscribeMessage> {
             buff.release();
         }
     }
-    
+
 }

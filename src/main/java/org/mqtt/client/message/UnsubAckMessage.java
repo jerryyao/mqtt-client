@@ -22,7 +22,7 @@ package org.mqtt.client.message;
 public class UnsubAckMessage extends MessageIDMessage {
     
     public UnsubAckMessage() {
-        m_messageType = UNSUBACK;
+        m_messageType = MessageType.UNSUBACK;
     }
 }
 

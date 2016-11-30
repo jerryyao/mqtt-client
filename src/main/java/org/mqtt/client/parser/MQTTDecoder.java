@@ -15,44 +15,42 @@
  */
 package org.mqtt.client.parser;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.mqtt.client.message.AbstractMessage;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.util.AttributeKey;
+import org.mqtt.client.message.MessageType;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
- *
  * @author andrea
  */
 public class MQTTDecoder extends ByteToMessageDecoder {
-    
+
     //3 = 3.1, 4 = 3.1.1
     static final AttributeKey<Integer> PROTOCOL_VERSION = AttributeKey.valueOf("version");
-    
+
     private final Map<Byte, DemuxDecoder> m_decoderMap = new HashMap<>();
-    
+
     public MQTTDecoder() {
-       m_decoderMap.put(AbstractMessage.CONNECT, new ConnectDecoder());
-       m_decoderMap.put(AbstractMessage.CONNACK, new ConnAckDecoder());
-       m_decoderMap.put(AbstractMessage.PUBLISH, new PublishDecoder());
-       m_decoderMap.put(AbstractMessage.PUBACK, new PubAckDecoder());
-       m_decoderMap.put(AbstractMessage.SUBSCRIBE, new SubscribeDecoder());
-       m_decoderMap.put(AbstractMessage.SUBACK, new SubAckDecoder());
-       m_decoderMap.put(AbstractMessage.UNSUBSCRIBE, new UnsubscribeDecoder());
-       m_decoderMap.put(AbstractMessage.DISCONNECT, new DisconnectDecoder());
-       m_decoderMap.put(AbstractMessage.PINGREQ, new PingReqDecoder());
-       m_decoderMap.put(AbstractMessage.PINGRESP, new PingRespDecoder());
-       m_decoderMap.put(AbstractMessage.UNSUBACK, new UnsubAckDecoder());
-       m_decoderMap.put(AbstractMessage.PUBCOMP, new PubCompDecoder());
-       m_decoderMap.put(AbstractMessage.PUBREC, new PubRecDecoder());
-       m_decoderMap.put(AbstractMessage.PUBREL, new PubRelDecoder());
+        m_decoderMap.put(MessageType.CONNECT, new ConnectDecoder());
+        m_decoderMap.put(MessageType.CONNACK, new ConnAckDecoder());
+        m_decoderMap.put(MessageType.PUBLISH, new PublishDecoder());
+        m_decoderMap.put(MessageType.PUBACK, new PubAckDecoder());
+        m_decoderMap.put(MessageType.SUBSCRIBE, new SubscribeDecoder());
+        m_decoderMap.put(MessageType.SUBACK, new SubAckDecoder());
+        m_decoderMap.put(MessageType.UNSUBSCRIBE, new UnsubscribeDecoder());
+        m_decoderMap.put(MessageType.DISCONNECT, new DisconnectDecoder());
+        m_decoderMap.put(MessageType.PINGREQ, new PingReqDecoder());
+        m_decoderMap.put(MessageType.PINGRESP, new PingRespDecoder());
+        m_decoderMap.put(MessageType.UNSUBACK, new UnsubAckDecoder());
+        m_decoderMap.put(MessageType.PUBCOMP, new PubCompDecoder());
+        m_decoderMap.put(MessageType.PUBREC, new PubRecDecoder());
+        m_decoderMap.put(MessageType.PUBREL, new PubRelDecoder());
     }
 
     @Override
@@ -63,9 +61,9 @@ public class MQTTDecoder extends ByteToMessageDecoder {
             return;
         }
         in.resetReaderIndex();
-        
+
         byte messageType = Utils.readMessageType(in);
-        
+
         DemuxDecoder decoder = m_decoderMap.get(messageType);
         if (decoder == null) {
             throw new CorruptedFrameException("Can't find any suitable decoder for message type: " + messageType);

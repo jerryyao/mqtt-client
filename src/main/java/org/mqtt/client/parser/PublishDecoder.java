@@ -19,8 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.util.AttributeMap;
-import org.mqtt.client.message.AbstractMessage;
 import org.mqtt.client.message.PublishMessage;
+import org.mqtt.client.message.QOSType;
 
 import java.util.List;
 
@@ -43,12 +43,12 @@ class PublishDecoder extends DemuxDecoder {
         }
 
         if (Utils.isMQTT3_1_1(ctx)) {
-            if (message.getQos() == AbstractMessage.QOSType.MOST_ONE && message.isDupFlag()) {
+            if (message.getQos() == QOSType.MOST_ONE && message.isDupFlag()) {
                 //bad protocol, if QoS=0 => DUP = 0
                 throw new CorruptedFrameException("Received a PUBLISH with QoS=0 & DUP = 1, MQTT 3.1.1 violation");
             }
 
-            if (message.getQos() == AbstractMessage.QOSType.RESERVED) {
+            if (message.getQos() == QOSType.RESERVED) {
                 throw new CorruptedFrameException("Received a PUBLISH with QoS flags setted 10 b11, MQTT 3.1.1 violation");
             }
         }
@@ -72,8 +72,8 @@ class PublishDecoder extends DemuxDecoder {
 
         message.setTopicName(topic);
 
-        if (message.getQos() == AbstractMessage.QOSType.LEAST_ONE ||
-                message.getQos() == AbstractMessage.QOSType.EXACTLY_ONCE) {
+        if (message.getQos() == QOSType.LEAST_ONE ||
+                message.getQos() == QOSType.EXACTLY_ONCE) {
             message.setMessageID(in.readUnsignedShort());
         }
         int stopPos = in.readerIndex();

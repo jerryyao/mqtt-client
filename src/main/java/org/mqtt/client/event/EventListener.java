@@ -8,14 +8,14 @@ public interface EventListener {
 	}
 
 	default void publishSuccess() {
-
 	}
 
 	default void subscribeSuccess() {
-
 	}
 
-	default void messageArrive(PublishMessage msg) {
+    default void disconnect(){
+    }
 
+	default void messageArrive(PublishMessage msg) {
 	}
 }

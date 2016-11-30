@@ -2,11 +2,9 @@ package org.mqtt.client;
 
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
-import org.mqtt.client.MqttClient;
-import org.mqtt.client.MqttClientFactory;
 import org.mqtt.client.event.EventListener;
-import org.mqtt.client.message.AbstractMessage.QOSType;
 import org.mqtt.client.message.PublishMessage;
+import org.mqtt.client.message.QOSType;
 import org.mqtt.client.util.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,10 +22,12 @@ public class JunitTestCase {
 
     Logger log = LoggerFactory.getLogger(getClass());
 
+    MqttClientOption option = MqttClientOption.instance().host("localhost").port(1883);
+
 
     @Test
     public void heartbeat() {
-        MqttClient c = new MqttClient();
+        MqttClient c = new MqttClient(option);
         c.connect();
 
         while (true) {
@@ -35,9 +35,9 @@ public class JunitTestCase {
         }
     }
 
-    public static void pressureTest() {
+    public void pressureTest() {
 
-        MqttClient subClient = new MqttClient();
+        MqttClient subClient = new MqttClient(option);
         subClient.connect();
         subClient.subscribe(Config.publish_topic, QOSType.valueOf(Config.qos));
 
@@ -47,7 +47,7 @@ public class JunitTestCase {
         for (int j = 0; j < threadNum; j++) {
             es.submit(() -> {
                 for (int i = 0; i < Config.connection_num_per_thread; i++) {
-                    MqttClient client = new MqttClient();
+                    MqttClient client = new MqttClient(option);
                     client.connect();
 //					log.error("client connected : {}", statistics.incrementAndGet());
 //					String message = Thread.currentThread().getName() + "_message_" + i;
@@ -68,11 +68,11 @@ public class JunitTestCase {
         for (int j = 0; j < threadNum; j++) {
             es.submit(() -> {
                 for (int i = 0; i < Config.connection_num_per_thread; i++) {
-                    MqttClient client = MqttClientFactory.createShareBootClient();
+                    MqttClient client = new MqttClient(option);
                     client.connect();
                     clientList.add(client);
                     latch.countDown();
-                    log.error("client : {} connected", client.getClientId());
+//                    log.error("client : {} connected", client.getClientId());
                 }
             });
         }
@@ -133,7 +133,7 @@ public class JunitTestCase {
                 client.removeListener();
                 String randomTopic = randomTopic(topic, false);
                 String content = "current time : " + LocalDateTime.now().toString();
-                client.publish(randomTopic, QOSType.LEAST_ONE, content);
+                client.publish(randomTopic, QOSType.LEAST_ONE, false, content);
 
                 client.setListener(new EventListener() {
 
@@ -153,7 +153,7 @@ public class JunitTestCase {
             }
 
             if (currentTimes >= runtimes) {
-                clientList.parallelStream().forEach(client -> client.close());
+                clientList.parallelStream().forEach(client -> client.disconnect());
                 System.exit(0);
             }
 
@@ -194,7 +194,7 @@ public class JunitTestCase {
 
     // @Test
     public void duplicateConnect() {
-        MqttClient client = new MqttClient();
+        MqttClient client = new MqttClient(option);
         client.connect();
         client.connect();
     }
@@ -203,9 +203,8 @@ public class JunitTestCase {
     public void duplicateClientID() {
 
         try {
-            MqttClient client1 = new MqttClient();
-            MqttClient client2 = new MqttClient();
-            client2.setClientId(client1.getClientId());
+            MqttClient client1 = new MqttClient(option);
+            MqttClient client2 = new MqttClient(option);
 
             client1.connect();
             client2.connect();
@@ -216,7 +215,7 @@ public class JunitTestCase {
 
     // @Test
     public void wildcard() {
-        MqttClient client = new MqttClient();
+        MqttClient client = new MqttClient(option);
         client.setListener(new EventListener() {
 
             /*
@@ -260,10 +259,10 @@ public class JunitTestCase {
 
         client.subscribe("boot/+", QOSType.LEAST_ONE);
 
-        client.publish("boot", QOSType.LEAST_ONE, "boot root content");
+        client.publish("boot", QOSType.LEAST_ONE, false, "boot root content");
 
-        client.publish("boot/test", QOSType.LEAST_ONE, "boot sub content");
-        client.publish("boot/spring", QOSType.LEAST_ONE, "boot spring content");
+        client.publish("boot/test", QOSType.LEAST_ONE, false, "boot sub content");
+        client.publish("boot/spring", QOSType.LEAST_ONE, false, "boot spring content");
 
         // client.subscribe("boot/#", QOSType.LEAST_ONE.byteValue());
         //

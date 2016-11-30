@@ -3,16 +3,15 @@ package org.mqtt.client.handler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.CharsetUtil;
+import org.mqtt.client.MqttClientOption;
 import org.mqtt.client.event.EventKey;
 import org.mqtt.client.event.EventManager;
 import org.mqtt.client.event.EventType;
 import org.mqtt.client.message.*;
-import org.mqtt.client.message.AbstractMessage.*;
-import org.mqtt.client.util.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.mqtt.client.message.AbstractMessage.*;
+import static org.mqtt.client.message.MessageType.*;
 
 /**
  * Created by pactera on 2016/11/17.
@@ -63,11 +62,11 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
 
     private void processConnAck(ChannelHandlerContext ctx, ConnAckMessage message) {
         if (message.getReturnCode() == ConnAckMessage.CONNECTION_ACCEPTED) {
-            log.debug("{} connect success", ctx.channel().attr(Config.CLIENT_ID).get());
-            EventManager.notify(new EventKey(EventType.CONNECT_SUCCESS, ctx.channel()), message);
+            log.debug("{} connect success", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
+            EventManager.notify(new EventKey(EventType.CONNECT_SUCCESS, ctx.channel().attr(MqttClientOption.CLIENT_ID).get()), message);
         } else {
-            log.debug("{} connect failure", ctx.channel().attr(Config.CLIENT_ID).get());
-            EventManager.notify(new EventKey(EventType.CONNECT_FAILURE, ctx.channel()), message);
+            log.debug("{} connect failure", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
+            EventManager.notify(new EventKey(EventType.CONNECT_FAILURE, ctx.channel().attr(MqttClientOption.CLIENT_ID).get()), message);
         }
     }
 
@@ -77,7 +76,7 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
         message.getPayload().get(msg);
         log.debug("accept message : topic-{}; content-{}", message.getTopicName(), new String(msg, CharsetUtil.UTF_8));
 
-        EventManager.notify(new EventKey(EventType.MESSAGE_ARRIVE, ctx.channel()), message);
+        EventManager.notify(new EventKey(EventType.MESSAGE_ARRIVE, ctx.channel().attr(MqttClientOption.CLIENT_ID).get()), message);
 
         if (message.getQos().byteValue() > QOSType.MOST_ONE.byteValue()) {
             if (message.getQos() == QOSType.LEAST_ONE) {
@@ -97,8 +96,8 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
 
     private void processPubAck(ChannelHandlerContext ctx, PubAckMessage message) {
 
-        EventManager.notify(new EventKey(EventType.PUBLISH_SUCCESS, ctx.channel()), message);
-        log.debug("publish success : {}", ctx.channel().attr(Config.CLIENT_ID).get());
+        EventManager.notify(new EventKey(EventType.PUBLISH_SUCCESS, ctx.channel().attr(MqttClientOption.CLIENT_ID).get()), message);
+        log.debug("publish success : {}", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
     }
 
     private void processPubRec(ChannelHandlerContext ctx, PubRecMessage message) {
@@ -120,8 +119,8 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void processPubComp(ChannelHandlerContext ctx, PubCompMessage message) {
-        EventManager.notify(new EventKey(EventType.PUBLISH_SUCCESS, ctx.channel()), message);
-        log.debug("publish success : {}", ctx.channel().attr(Config.CLIENT_ID).get());
+        EventManager.notify(new EventKey(EventType.PUBLISH_SUCCESS, ctx.channel().attr(MqttClientOption.CLIENT_ID).get()), message);
+        log.debug("publish success : {}", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
     }
 
     private void processSubAck(ChannelHandlerContext ctx, SubAckMessage message) {
@@ -137,21 +136,21 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
             }
         }
         if (success) {
-            EventManager.notify(new EventKey(EventType.SUBSCRIBE_SUCCESS, ctx.channel()), message);
-            log.debug("subscribe success : {} ", ctx.channel().attr(Config.CLIENT_ID).get());
+            EventManager.notify(new EventKey(EventType.SUBSCRIBE_SUCCESS, ctx.channel().attr(MqttClientOption.CLIENT_ID).get()), message);
+            log.debug("subscribe success : {} ", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
         } else {
-            EventManager.notify(new EventKey(EventType.SUBSCRIBE_FAILURE, ctx.channel()), message);
-            log.debug("subscribe failure : {} ", ctx.channel().attr(Config.CLIENT_ID).get());
+            EventManager.notify(new EventKey(EventType.SUBSCRIBE_FAILURE, ctx.channel().attr(MqttClientOption.CLIENT_ID).get()), message);
+            log.debug("subscribe failure : {} ", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
         }
     }
 
     private void processUnsbAck(ChannelHandlerContext ctx, UnsubAckMessage message) {
-        EventManager.notify(new EventKey(EventType.UNSUBSCRIBE_SUCCESS, ctx.channel()), message);
-        log.debug("unsubscribe success : {} ", ctx.channel().attr(Config.CLIENT_ID).get());
+        EventManager.notify(new EventKey(EventType.UNSUBSCRIBE_SUCCESS, ctx.channel().attr(MqttClientOption.CLIENT_ID).get()), message);
+        log.debug("unsubscribe success : {} ", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
     }
 
     private void processPingResp(ChannelHandlerContext ctx, PingRespMessage message) {
-//        log.debug("unsubscribe success : {} ", ctx.channel().attr(Config.CLIENT_ID).get());
+//        log.debug("unsubscribe success : {} ", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
     }
 
     @Override
@@ -163,7 +162,7 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ctx.close();
-        log.error("lose connecttion : {}", ctx.channel().attr(Config.CLIENT_ID).get());
+        log.error("lose connecttion : {}", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
     }
 
 }

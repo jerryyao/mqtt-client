@@ -22,7 +22,7 @@ package org.mqtt.client.message;
 public class PubCompMessage extends MessageIDMessage {
     
     public PubCompMessage() {
-        m_messageType = PUBCOMP;
+        m_messageType = MessageType.PUBCOMP;
     }
 }
 

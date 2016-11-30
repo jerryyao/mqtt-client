@@ -47,7 +47,7 @@ public class EventManager {
 
         List<EventCallback> callbackList = listenerMap.get(key);
         for (EventCallback callback : callbackList) {
-            executor.submit(() -> callback.callback(msg));
+            executor.execute(() -> callback.callback(msg));
         }
     }
 }

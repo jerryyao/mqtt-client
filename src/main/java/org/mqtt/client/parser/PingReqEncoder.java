@@ -15,20 +15,18 @@
  */
 package org.mqtt.client.parser;
 
-import org.mqtt.client.message.AbstractMessage;
-import org.mqtt.client.message.PingReqMessage;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import org.mqtt.client.message.MessageType;
+import org.mqtt.client.message.PingReqMessage;
 
 /**
- *
  * @author andrea
  */
-class PingReqEncoder  extends DemuxEncoder<PingReqMessage> {
+class PingReqEncoder extends DemuxEncoder<PingReqMessage> {
 
     @Override
     protected void encode(ChannelHandlerContext chc, PingReqMessage msg, ByteBuf out) {
-        out.writeByte(AbstractMessage.PINGREQ << 4).writeByte(0);
+        out.writeByte(MessageType.PINGREQ << 4).writeByte(0);
     }
 }

@@ -22,6 +22,6 @@ package org.mqtt.client.message;
 public class PubRelMessage extends MessageIDMessage {
     
     public PubRelMessage() {
-        m_messageType = PUBREL;
+        m_messageType = MessageType.PUBREL;
     }
 }

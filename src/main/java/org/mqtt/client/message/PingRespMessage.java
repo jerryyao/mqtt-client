@@ -22,6 +22,6 @@ package org.mqtt.client.message;
 public class PingRespMessage extends ZeroLengthMessage {
     
     public PingRespMessage() {
-        m_messageType = PINGRESP;
+        m_messageType = MessageType.PINGRESP;
     }
 }

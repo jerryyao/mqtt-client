@@ -23,6 +23,6 @@ package org.mqtt.client.message;
 public class PubRecMessage extends MessageIDMessage {
     
     public PubRecMessage() {
-        m_messageType = PUBREC;
+        m_messageType = MessageType.PUBREC;
     }
 }

@@ -15,18 +15,16 @@
  */
 package org.mqtt.client.parser;
 
-import java.io.UnsupportedEncodingException;
-import java.util.List;
-
-import org.mqtt.client.message.AbstractMessage.QOSType;
-import org.mqtt.client.message.SubscribeMessage;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.util.AttributeMap;
+import org.mqtt.client.message.QOSType;
+import org.mqtt.client.message.SubscribeMessage;
+
+import java.io.UnsupportedEncodingException;
+import java.util.List;
 
 /**
- *
  * @author andrea
  */
 class SubscribeDecoder extends DemuxDecoder {
@@ -40,12 +38,12 @@ class SubscribeDecoder extends DemuxDecoder {
             in.resetReaderIndex();
             return;
         }
-        
+
         //check qos level
         if (message.getQos() != QOSType.LEAST_ONE) {
             throw new CorruptedFrameException("Received SUBSCRIBE message with QoS other than LEAST_ONE, was: " + message.getQos());
         }
-            
+
         int start = in.readerIndex();
         //read  messageIDs
         message.setMessageID(in.readUnsignedShort());
@@ -54,14 +52,14 @@ class SubscribeDecoder extends DemuxDecoder {
             decodeSubscription(in, message);
             read = in.readerIndex() - start;
         }
-        
+
         if (message.subscriptions().isEmpty()) {
             throw new CorruptedFrameException("subscribe MUST have got at least 1 couple topic/QoS");
-        } 
-        
+        }
+
         out.add(message);
     }
-    
+
     /**
      * Populate the message with couple of Qos, topic
      */
@@ -75,9 +73,9 @@ class SubscribeDecoder extends DemuxDecoder {
         if ((qosByte & 0xFC) > 0) { //the first 6 bits is reserved => has to be 0
             throw new CorruptedFrameException("subscribe MUST have QoS byte with reserved buts to 0, found " + Integer.toHexString(qosByte));
         }
-        byte qos = (byte)(qosByte & 0x03);
+        byte qos = (byte) (qosByte & 0x03);
         //TODO check qos id 000000xx
         message.addSubscription(new SubscribeMessage.Couple(qos, topic));
     }
-    
+
 }

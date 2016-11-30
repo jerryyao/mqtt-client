@@ -15,15 +15,13 @@
  */
 package org.mqtt.client.parser;
 
-import org.mqtt.client.message.AbstractMessage;
-import org.mqtt.client.message.AbstractMessage.QOSType;
-import org.mqtt.client.message.SubAckMessage;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import org.mqtt.client.message.MessageType;
+import org.mqtt.client.message.QOSType;
+import org.mqtt.client.message.SubAckMessage;
 
 /**
- *
  * @author andrea
  */
 class SubAckEncoder extends DemuxEncoder<SubAckMessage> {
@@ -37,7 +35,7 @@ class SubAckEncoder extends DemuxEncoder<SubAckMessage> {
         int variableHeaderSize = 2 + message.types().size();
         ByteBuf buff = chc.alloc().buffer(6 + variableHeaderSize);
         try {
-            buff.writeByte(AbstractMessage.SUBACK << 4 );
+            buff.writeByte(MessageType.SUBACK << 4);
             buff.writeBytes(Utils.encodeRemainingLength(variableHeaderSize));
             buff.writeShort(message.getMessageID());
             for (QOSType c : message.types()) {
@@ -49,5 +47,5 @@ class SubAckEncoder extends DemuxEncoder<SubAckMessage> {
             buff.release();
         }
     }
-    
+
 }
