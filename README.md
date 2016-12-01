@@ -1,5 +1,17 @@
-#mqtt-client
+# mqtt-client
 
-一个使用netty实现的MQTT协议的客户端，支持TCP，SSL
+## 说明
+-   > 此客户端是对broker进行压力测试时用的，支持单机创建大量的链接而只用很少的资源，这得益于netty的线程架构
+-   > 使用netty实现，支持TCP，SSL
+-   > 序列化使用[https://github.com/andsel/moquette](https://github.com/andsel/moquette)的组件，只做了简单的重构
 
-说明：序列化使用[https://github.com/andsel/moquette](https://github.com/andsel/moquette)的组件，制作了简单的重构
+## 使用
+-   如果需要创建大量的客户端，只需指定不同的clientId即可
+
+-   DEMO
+    >       MqttClientOption option = MqttClientOption.instance().host("localhost").port(1883).clientId("client");
+    >       MqttClient client = new MqttClient(option);
+    >       client.connect();
+    >       ......
+
+
