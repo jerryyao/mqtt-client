@@ -1,9 +1,9 @@
 # mqtt-client
 
 ## 说明
--   > 此客户端是对broker进行压力测试时用的，支持单机创建大量的链接而只用很少的资源，这得益于netty的线程架构
--   > 使用netty实现，支持TCP，SSL
--   > 序列化使用[https://github.com/andsel/moquette](https://github.com/andsel/moquette)的组件，只做了简单的重构
+-   此客户端是对broker进行压力测试时用的，支持单机创建大量的链接而只用很少的资源，这得益于netty的线程架构
+-   使用netty实现，支持TCP，SSL
+-   序列化使用[https://github.com/andsel/moquette](https://github.com/andsel/moquette)的组件，只做了简单的重构
 
 ## 使用
 -   如果需要创建大量的客户端，只需指定不同的clientId即可
