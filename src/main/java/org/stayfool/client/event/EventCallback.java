@@ -1,10 +1,8 @@
 package org.stayfool.client.event;
 
-import org.stayfool.client.message.AbstractMessage;
-
 /**
  * Created by pactera on 2016/11/17.
  */
 public interface EventCallback {
-	void callback(AbstractMessage msg);
+    void callback(Object msg);
 }

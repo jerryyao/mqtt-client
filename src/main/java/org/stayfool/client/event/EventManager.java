@@ -3,10 +3,11 @@ package org.stayfool.client.event;
 import org.stayfool.client.message.AbstractMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.stayfool.client.message.ConnAckMessage;
+import org.stayfool.client.message.PublishMessage;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.lang.reflect.Method;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
@@ -31,7 +32,7 @@ public class EventManager {
         log.debug("event {} registed.", key);
     }
 
-    public static void unRegister(EventKey key) {
+    public static void unregister(EventKey key) {
         if (listenerMap.containsKey(key)) {
             listenerMap.remove(key);
             log.debug("event {} unregisted.", key);
@@ -40,14 +41,37 @@ public class EventManager {
         }
     }
 
-    public static void notify(EventKey key, AbstractMessage msg) {
+    public static void notify(EventKey key, Object msg) {
         log.debug("notify event {}", key);
         if (!listenerMap.containsKey(key))
             return;
 
         List<EventCallback> callbackList = listenerMap.get(key);
-        for (EventCallback callback : callbackList) {
-            executor.execute(() -> callback.callback(msg));
+
+        callbackList.stream().forEach(call -> executor.execute(() -> call.callback(msg)));
+    }
+
+    public static void registerListener(String clientId, EventListener listener) {
+
+        register(new EventKey(EventType.MESSAGE_ARRIVE, clientId), (msg) -> listener.messageArrive((PublishMessage) msg));
+        register(new EventKey(EventType.PUBLISH_SUCCESS, clientId), (msg) -> listener.publishSuccess());
+        register(new EventKey(EventType.PUBLISH_FAILURE, clientId), (msg) -> listener.publishFailure());
+        register(new EventKey(EventType.CONNECT_SUCCESS, clientId), (msg) -> listener.connectSuccess());
+        register(new EventKey(EventType.CONNECT_FAILURE, clientId), (msg) -> listener.connectFailure((ConnAckMessage) msg));
+        register(new EventKey(EventType.SUBSCRIBE_SUCCESS, clientId), (msg) -> listener.subscribeSuccess((String) msg));
+        register(new EventKey(EventType.SUBSCRIBE_FAILURE, clientId), (msg) -> listener.subscribeFailure((String) msg));
+        register(new EventKey(EventType.DIS_CONNECT, clientId), (msg) -> listener.disconnect());
+    }
+
+    public static void unregisterListener(String clientId) {
+
+        Iterator<Map.Entry<EventKey, List<EventCallback>>> it = listenerMap.entrySet().iterator();
+
+        while (it.hasNext()) {
+            Map.Entry<EventKey, List<EventCallback>> o = it.next();
+            if (o.getKey().clientId().equals(clientId))
+                it.remove();
         }
+
     }
 }

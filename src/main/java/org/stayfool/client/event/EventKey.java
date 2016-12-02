@@ -10,6 +10,14 @@ public class EventKey {
         this.clientId = clientId;
     }
 
+    public EventType type() {
+        return type;
+    }
+
+    public String clientId() {
+        return clientId;
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj == null) {
@@ -25,7 +33,7 @@ public class EventKey {
 
         EventKey other = (EventKey) obj;
 
-        if (this.type == other.type && this.clientId.equals(other.clientId)) {
+        if (this.type.equals(other.type) && this.clientId.equals(other.clientId)) {
             return true;
         }
         return false;

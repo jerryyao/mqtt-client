@@ -3,13 +3,13 @@ package org.stayfool.client.handler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.CharsetUtil;
-import org.stayfool.client.MqttClientOption;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.stayfool.client.event.EventKey;
 import org.stayfool.client.event.EventManager;
 import org.stayfool.client.event.EventType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.stayfool.client.message.*;
+import org.stayfool.client.util.ChannelUtil;
 
 /**
  * Created by pactera on 2016/11/17.
@@ -60,11 +60,11 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
 
     private void processConnAck(ChannelHandlerContext ctx, ConnAckMessage message) {
         if (message.getReturnCode() == ConnAckMessage.CONNECTION_ACCEPTED) {
-            log.debug("{} connect success", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
-            EventManager.notify(new EventKey(EventType.CONNECT_SUCCESS, ctx.channel().attr(MqttClientOption.CLIENT_ID).get()), message);
+            log.debug("{} connect success", ChannelUtil.clientId(ctx.channel()));
+            EventManager.notify(new EventKey(EventType.CONNECT_SUCCESS, ChannelUtil.clientId(ctx.channel())), message);
         } else {
-            log.debug("{} connect failure", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
-            EventManager.notify(new EventKey(EventType.CONNECT_FAILURE, ctx.channel().attr(MqttClientOption.CLIENT_ID).get()), message);
+            log.debug("{} connect failure", ChannelUtil.clientId(ctx.channel()));
+            EventManager.notify(new EventKey(EventType.CONNECT_FAILURE, ChannelUtil.clientId(ctx.channel())), message);
         }
     }
 
@@ -74,7 +74,7 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
         message.getPayload().get(msg);
         log.debug("accept message : topic-{}; content-{}", message.getTopicName(), new String(msg, CharsetUtil.UTF_8));
 
-        EventManager.notify(new EventKey(EventType.MESSAGE_ARRIVE, ctx.channel().attr(MqttClientOption.CLIENT_ID).get()), message);
+        EventManager.notify(new EventKey(EventType.MESSAGE_ARRIVE, ChannelUtil.clientId(ctx.channel())), message);
 
         if (message.getQos().byteValue() > QOSType.MOST_ONE.byteValue()) {
             if (message.getQos() == QOSType.LEAST_ONE) {
@@ -94,8 +94,8 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
 
     private void processPubAck(ChannelHandlerContext ctx, PubAckMessage message) {
 
-        EventManager.notify(new EventKey(EventType.PUBLISH_SUCCESS, ctx.channel().attr(MqttClientOption.CLIENT_ID).get()), message);
-        log.debug("publish success : {}", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
+        EventManager.notify(new EventKey(EventType.PUBLISH_SUCCESS, ChannelUtil.clientId(ctx.channel())), message);
+        log.debug("publish success : {}", ChannelUtil.clientId(ctx.channel()));
     }
 
     private void processPubRec(ChannelHandlerContext ctx, PubRecMessage message) {
@@ -117,8 +117,8 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void processPubComp(ChannelHandlerContext ctx, PubCompMessage message) {
-        EventManager.notify(new EventKey(EventType.PUBLISH_SUCCESS, ctx.channel().attr(MqttClientOption.CLIENT_ID).get()), message);
-        log.debug("publish success : {}", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
+        EventManager.notify(new EventKey(EventType.PUBLISH_SUCCESS, ChannelUtil.clientId(ctx.channel())), message);
+        log.debug("publish success : {}", ChannelUtil.clientId(ctx.channel()));
     }
 
     private void processSubAck(ChannelHandlerContext ctx, SubAckMessage message) {
@@ -134,21 +134,21 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
             }
         }
         if (success) {
-            EventManager.notify(new EventKey(EventType.SUBSCRIBE_SUCCESS, ctx.channel().attr(MqttClientOption.CLIENT_ID).get()), message);
-            log.debug("subscribe success : {} ", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
+            EventManager.notify(new EventKey(EventType.SUBSCRIBE_SUCCESS, ChannelUtil.clientId(ctx.channel())), message);
+            log.debug("subscribe success : {} ", ChannelUtil.clientId(ctx.channel()));
         } else {
-            EventManager.notify(new EventKey(EventType.SUBSCRIBE_FAILURE, ctx.channel().attr(MqttClientOption.CLIENT_ID).get()), message);
-            log.debug("subscribe failure : {} ", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
+            EventManager.notify(new EventKey(EventType.SUBSCRIBE_FAILURE, ChannelUtil.clientId(ctx.channel())), message);
+            log.debug("subscribe failure : {} ", ChannelUtil.clientId(ctx.channel()));
         }
     }
 
     private void processUnsbAck(ChannelHandlerContext ctx, UnsubAckMessage message) {
-        EventManager.notify(new EventKey(EventType.UNSUBSCRIBE_SUCCESS, ctx.channel().attr(MqttClientOption.CLIENT_ID).get()), message);
-        log.debug("unsubscribe success : {} ", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
+        EventManager.notify(new EventKey(EventType.UNSUBSCRIBE_SUCCESS, ChannelUtil.clientId(ctx.channel())), message);
+        log.debug("unsubscribe success : {} ", ChannelUtil.clientId(ctx.channel()));
     }
 
     private void processPingResp(ChannelHandlerContext ctx, PingRespMessage message) {
-//        log.debug("unsubscribe success : {} ", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
+//        log.debug("unsubscribe success : {} ", ChannelUtil.clientId(ctx.channel()));
     }
 
     @Override
@@ -160,7 +160,7 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ctx.close();
-        log.error("lose connecttion : {}", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
+        log.error("lose connecttion : {}", ChannelUtil.clientId(ctx.channel()));
     }
 
 }

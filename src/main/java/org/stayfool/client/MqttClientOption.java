@@ -16,7 +16,6 @@ public class MqttClientOption {
     public static final String SSL = "SSL";
     public static final String TLS = "TLS";
     public static final String JKS = "JKS";
-    public static final AttributeKey<String> CLIENT_ID = AttributeKey.newInstance("CLIENT_ID");
 
     // client common info
     private String clientId = String.valueOf(System.currentTimeMillis());

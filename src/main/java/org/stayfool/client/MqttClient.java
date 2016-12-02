@@ -11,17 +11,18 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.stayfool.client.event.EventKey;
 import org.stayfool.client.event.EventListener;
 import org.stayfool.client.event.EventManager;
 import org.stayfool.client.event.EventType;
 import org.stayfool.client.handler.HeartBeatHandler;
 import org.stayfool.client.handler.MqttClientHandler;
+import org.stayfool.client.message.*;
 import org.stayfool.client.parser.MQTTDecoder;
 import org.stayfool.client.parser.MQTTEncoder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.stayfool.client.message.*;
+import org.stayfool.client.util.ChannelUtil;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -38,7 +39,6 @@ import java.util.concurrent.CountDownLatch;
  * @author stayfool
  */
 public class MqttClient {
-
 
     private Logger log = LoggerFactory.getLogger(getClass());
 
@@ -168,25 +168,15 @@ public class MqttClient {
      * @param listener
      */
     public void setListener(EventListener listener) {
-        EventManager.register(new EventKey(EventType.MESSAGE_ARRIVE, option.clientId()),
-                (msg) -> listener.messageArrive((PublishMessage) msg));
-        EventManager.register(new EventKey(EventType.PUBLISH_SUCCESS, option.clientId()), (msg) -> listener.publishSuccess());
-        EventManager.register(new EventKey(EventType.CONNECT_SUCCESS, option.clientId()), (msg) -> listener.connectSuccess());
-        EventManager.register(new EventKey(EventType.SUBSCRIBE_SUCCESS, option.clientId()), (msg) -> listener.subscribeSuccess());
-        EventManager.register(new EventKey(EventType.DIS_CONNECT, option.clientId()), (msg) -> listener.disconnect());
+        EventManager.registerListener(option.clientId(), listener);
     }
 
     /**
      * remove listener
      */
     public void removeListener() {
-        EventManager.unRegister(new EventKey(EventType.MESSAGE_ARRIVE, option.clientId()));
-        EventManager.unRegister(new EventKey(EventType.PUBLISH_SUCCESS, option.clientId()));
-        EventManager.unRegister(new EventKey(EventType.CONNECT_SUCCESS, option.clientId()));
-        EventManager.unRegister(new EventKey(EventType.SUBSCRIBE_SUCCESS, option.clientId()));
-        EventManager.unRegister(new EventKey(EventType.DIS_CONNECT, option.clientId()));
+        EventManager.unregisterListener(option.clientId());
     }
-
 
     private void doConnect() {
         ConnectMessage msg = new ConnectMessage();
@@ -249,7 +239,7 @@ public class MqttClient {
     private void initChannel() {
         try {
             channel = boot.connect(option.host(), option.port()).sync().channel();
-            channel.attr(MqttClientOption.CLIENT_ID).set(option.clientId());
+            ChannelUtil.clientId(channel, option.clientId());
         } catch (InterruptedException e) {
             log.error("init channel failed", e);
             exit();

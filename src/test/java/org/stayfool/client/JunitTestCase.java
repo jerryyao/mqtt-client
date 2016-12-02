@@ -25,7 +25,7 @@ public class JunitTestCase {
     MqttClientOption option = MqttClientOption.instance().host("localhost").port(1883);
 
 
-    @Test
+    //    @Test
     public void heartbeat() {
         MqttClient c = new MqttClient(option);
         c.connect();
@@ -103,10 +103,6 @@ public class JunitTestCase {
                      * @see
                      * EventListener#subscribeSuccess()
                      */
-                    @Override
-                    public void subscribeSuccess() {
-                        log.error("subscribe success : [clientID:{},topic:{}]", client.getClientId(), randomTopic);
-                    }
 
                     /*
                      * (non-Javadoc)
@@ -199,7 +195,7 @@ public class JunitTestCase {
         client.connect();
     }
 
-    //    @Test
+    @Test
     public void duplicateClientID() {
 
         try {
@@ -208,6 +204,9 @@ public class JunitTestCase {
 
             client1.connect();
             client2.connect();
+
+            assert client2.isConnect();
+            assert client1.isConnect();
         } catch (Exception e) {
             e.printStackTrace();
         }
