@@ -13,8 +13,8 @@ import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.stayfool.client.event.EventCallback;
 import org.stayfool.client.event.EventKey;
-import org.stayfool.client.event.EventListener;
 import org.stayfool.client.event.EventManager;
 import org.stayfool.client.event.EventType;
 import org.stayfool.client.handler.HeartBeatHandler;
@@ -22,15 +22,16 @@ import org.stayfool.client.handler.MqttClientHandler;
 import org.stayfool.client.message.*;
 import org.stayfool.client.parser.MQTTDecoder;
 import org.stayfool.client.parser.MQTTEncoder;
+import org.stayfool.client.session.Session;
+import org.stayfool.client.session.SessionManager;
 import org.stayfool.client.util.ChannelUtil;
+import org.stayfool.client.util.IDUtil;
 
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.*;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.security.KeyStore;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -45,9 +46,9 @@ public class MqttClient {
     private static volatile Bootstrap boot;
     private Channel channel;
     private boolean isConnect;
-    private MqttClientOption option;
+    private MqttOption option;
 
-    public MqttClient(MqttClientOption option) {
+    public MqttClient(MqttOption option) {
         if (option == null || !option.validate())
             throw new IllegalArgumentException();
         this.option = option;
@@ -65,8 +66,8 @@ public class MqttClient {
     /**
      * subscribe a top
      *
-     * @param topic
-     * @param qos
+     * @param topic 主题
+     * @param qos   qos
      */
     public void subscribe(String topic, QOSType qos) {
         subscribe(new String[]{topic}, qos);
@@ -75,45 +76,52 @@ public class MqttClient {
     /**
      * subscribe topics
      *
-     * @param filters
-     * @param qos
+     * @param filters 主题表达式
+     * @param qos     qos
      */
     public void subscribe(String[] filters, QOSType qos) {
         checkConnect();
 
         SubscribeMessage msg = new SubscribeMessage();
-        msg.setMessageID(Long.valueOf(System.currentTimeMillis()).intValue());
+        msg.setMessageID(IDUtil.nextAvailableId(option.clientId()));
         for (String topic : filters)
             msg.addSubscription(new SubscribeMessage.Couple(qos.byteValue(), topic));
 
         sendMessage(msg);
+
     }
 
     /**
      * publish a message to a topic
      *
-     * @param topic
-     * @param qos
-     * @param retain
-     * @param contect
+     * @param topic   主题
+     * @param qos     qos
+     * @param retain  是否保存
+     * @param contect 消息内容
      */
     public void publish(String topic, QOSType qos, boolean retain, String contect) {
         checkConnect();
 
         PublishMessage msg = new PublishMessage();
-        msg.setMessageID(Long.valueOf(System.currentTimeMillis()).intValue());
+        msg.setMessageID(IDUtil.nextAvailableId(option.clientId()));
         msg.setQos(qos);
         msg.setTopicName(topic);
         msg.setPayload(ByteBuffer.wrap(contect.getBytes(CharsetUtil.UTF_8)));
         msg.setRetainFlag(retain);
 
         sendMessage(msg);
+
+        if (qos.byteValue() > QOSType.MOST_ONE.byteValue()) {
+            SessionManager.getSession(option.clientId()).waitingForCommit(msg.getMessageID(), msg);
+            EventManager.register(new EventKey(EventType.PUBLIST_COMPLETE, option.clientId()), msgAck ->
+                    SessionManager.getSession(option.clientId()).commit(msg.getMessageID()));
+        }
     }
 
     /**
      * cancel a subscription
      *
-     * @param topic
+     * @param topic 主题
      */
     public void unsubscribe(String topic) {
         unsubscribe(new String[]{topic});
@@ -122,7 +130,7 @@ public class MqttClient {
     /**
      * cancel some subscription
      *
-     * @param filters
+     * @param filters 主题表达式
      */
     public void unsubscribe(String[] filters) {
         checkConnect();
@@ -142,12 +150,13 @@ public class MqttClient {
     public void disconnect() {
         checkConnect();
         sendMessage(new DisconnectMessage());
+        SessionManager.removeSession(option.clientId());
     }
 
     /**
      * return the connection status
      *
-     * @return
+     * @return isConnect
      */
     public boolean isConnect() {
         return isConnect;
@@ -156,7 +165,7 @@ public class MqttClient {
     /**
      * get clientId
      *
-     * @return
+     * @return clientId
      */
     public String getClientId() {
         return option.clientId();
@@ -165,17 +174,20 @@ public class MqttClient {
     /**
      * when something than the listener intrest happens , listener will be call
      *
-     * @param listener
+     * @param callback callback
+     * @param key      key
      */
-    public void setListener(EventListener listener) {
-        EventManager.registerListener(option.clientId(), listener);
+    public void addCallback(EventKey key, EventCallback callback) {
+        EventManager.register(key, callback);
     }
 
     /**
-     * remove listener
+     * remove callback
+     *
+     * @param key {@code EventKy}
      */
-    public void removeListener() {
-        EventManager.unregisterListener(option.clientId());
+    public void removeCallback(EventKey key) {
+        EventManager.unregister(key);
     }
 
     private void doConnect() {
@@ -198,6 +210,11 @@ public class MqttClient {
         sync(new EventKey(EventType.CONNECT_SUCCESS, option.clientId()));
 
         isConnect = true;
+
+        Session session = SessionManager.createSession(option.clientId());
+        session.clientId(option.clientId());
+        session.channel(channel);
+        session.connect();
     }
 
     private void initBoot() {
@@ -240,6 +257,8 @@ public class MqttClient {
         try {
             channel = boot.connect(option.host(), option.port()).sync().channel();
             ChannelUtil.clientId(channel, option.clientId());
+
+            Thread.sleep(5000);
         } catch (InterruptedException e) {
             log.error("init channel failed", e);
             exit();
@@ -257,18 +276,20 @@ public class MqttClient {
         try (InputStream in = Thread.currentThread().getContextClassLoader()
                 .getResourceAsStream(option.keyPath())) {
 
-            KeyStore ks = KeyStore.getInstance(MqttClientOption.JKS);
+            KeyStore ks = KeyStore.getInstance(MqttOption.JKS);
             ks.load(in, option.keyPass().toCharArray());
             tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
             tmf.init(ks);
 
+            KeyManager[] keyManagers = null;
             if (!option.clientMode()) {
                 kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
                 kmf.init(ks, option.keyPass().toCharArray());
+                keyManagers = kmf.getKeyManagers();
             }
 
-            SSLContext ssl = SSLContext.getInstance(MqttClientOption.SSL);
-            ssl.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+            SSLContext ssl = SSLContext.getInstance(MqttOption.SSL);
+            ssl.init(keyManagers, tmf.getTrustManagers(), null);
             SSLEngine engine = ssl.createSSLEngine();
             engine.setUseClientMode(option.clientMode());
             pipeline.addFirst(new SslHandler(engine));
@@ -292,6 +313,18 @@ public class MqttClient {
             connectLatch.await();
         } catch (InterruptedException e) {
             log.error("sync {} failed, cause : {} ", event, e);
+        }
+    }
+
+    private void syncOr(List<EventKey> eventKeys) {
+
+        final CountDownLatch connectLatch = new CountDownLatch(1);
+
+        eventKeys.forEach(key -> EventManager.register(key, (msg) -> connectLatch.countDown()));
+        try {
+            connectLatch.await();
+        } catch (InterruptedException e) {
+            log.error("sync {} failed, cause : {} ", eventKeys, e);
         }
     }
 

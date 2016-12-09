@@ -33,10 +33,7 @@ public class EventKey {
 
         EventKey other = (EventKey) obj;
 
-        if (this.type.equals(other.type) && this.clientId.equals(other.clientId)) {
-            return true;
-        }
-        return false;
+        return this.type.equals(other.type) && this.clientId.equals(other.clientId);
     }
 
     @Override
@@ -49,12 +46,6 @@ public class EventKey {
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder();
-        builder.append("{");
-        builder.append(type.toString());
-        builder.append(":");
-        builder.append(clientId);
-        builder.append("}");
-        return builder.toString();
+        return "{" + type.toString() + ":" + clientId + "}";
     }
 }

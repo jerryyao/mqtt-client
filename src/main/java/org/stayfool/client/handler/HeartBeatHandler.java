@@ -4,10 +4,10 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
-import org.stayfool.client.MqttClientOption;
-import org.stayfool.client.message.PingReqMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.stayfool.client.message.PingReqMessage;
+import org.stayfool.client.util.ChannelUtil;
 
 /**
  * Created by pactera on 2016/11/28.
@@ -22,7 +22,7 @@ public class HeartBeatHandler extends ChannelDuplexHandler {
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof IdleStateEvent && ((IdleStateEvent) evt).state() == IdleState.ALL_IDLE) {
             ctx.channel().writeAndFlush(new PingReqMessage());
-            log.debug("send heartbeat : {}", ctx.channel().attr(MqttClientOption.CLIENT_ID).get());
+            log.debug("send heartbeat : {}", ChannelUtil.clientId(ctx.channel()));
         } else {
             ctx.fireUserEventTriggered(evt);
         }

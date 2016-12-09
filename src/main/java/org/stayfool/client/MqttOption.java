@@ -1,6 +1,5 @@
 package org.stayfool.client;
 
-import io.netty.util.AttributeKey;
 import io.netty.util.internal.StringUtil;
 import org.stayfool.client.message.QOSType;
 
@@ -11,7 +10,7 @@ import org.stayfool.client.message.QOSType;
  *         <p>
  *         MQTT client configuration
  */
-public class MqttClientOption {
+public class MqttOption {
 
     public static final String SSL = "SSL";
     public static final String TLS = "TLS";
@@ -38,82 +37,82 @@ public class MqttClientOption {
     private boolean clientMode = true;
 
 
-    public MqttClientOption clientId(String clientId) {
+    public MqttOption clientId(String clientId) {
         this.clientId = clientId;
         return this;
     }
 
-    public MqttClientOption shareBoot(boolean shareBoot) {
+    public MqttOption shareBoot(boolean shareBoot) {
         this.shareBoot = shareBoot;
         return this;
     }
 
-    public MqttClientOption host(String host) {
+    public MqttOption host(String host) {
         this.host = host;
         return this;
     }
 
-    public MqttClientOption port(int port) {
+    public MqttOption port(int port) {
         this.port = port;
         return this;
     }
 
-    public MqttClientOption username(String username) {
+    public MqttOption username(String username) {
         this.username = username;
         return this;
     }
 
-    public MqttClientOption password(String password) {
+    public MqttOption password(String password) {
         this.password = password;
         return this;
     }
 
-    public MqttClientOption keepAlive(int keepAlive) {
+    public MqttOption keepAlive(int keepAlive) {
         this.keepAlive = keepAlive;
         return this;
     }
 
-    public MqttClientOption cleanSession(boolean cleanSession) {
+    public MqttOption cleanSession(boolean cleanSession) {
         this.cleanSession = cleanSession;
         return this;
     }
 
-    public MqttClientOption willFlag(boolean willFlag) {
+    public MqttOption willFlag(boolean willFlag) {
         this.willFlag = willFlag;
         return this;
     }
 
-    public MqttClientOption willQos(QOSType willQos) {
+    public MqttOption willQos(QOSType willQos) {
         this.willQos = willQos;
         return this;
     }
 
-    public MqttClientOption willRetain(boolean willRetain) {
+    public MqttOption willRetain(boolean willRetain) {
         this.willRetain = willRetain;
         return this;
     }
 
-    public MqttClientOption willTopic(String willTopic) {
+    public MqttOption willTopic(String willTopic) {
         this.willTopic = willTopic;
         return this;
     }
 
-    public MqttClientOption willMessage(String willMessage) {
+    public MqttOption willMessage(String willMessage) {
         this.willMessage = willMessage;
         return this;
     }
 
-    public MqttClientOption keyPath(String keyPath) {
+    public MqttOption keyPath(String keyPath) {
         this.keyPath = keyPath;
         return this;
     }
 
-    public MqttClientOption keyPass(String keyPass) {
+    public MqttOption keyPass(String keyPass) {
         this.keyPass = keyPass;
         return this;
     }
 
-    public MqttClientOption clientMode(boolean clientMode) {
+    public MqttOption clientMode(boolean clientMode) {
         this.clientMode = clientMode;
         return this;
     }
@@ -190,10 +189,10 @@ public class MqttClientOption {
         return !(StringUtil.isNullOrEmpty(keyPath) || StringUtil.isNullOrEmpty(keyPass));
     }
 
-    private MqttClientOption() {
+    private MqttOption() {
     }
 
-    public static MqttClientOption instance() {
-        return new MqttClientOption();
+    public static MqttOption instance() {
+        return new MqttOption();
     }
 }

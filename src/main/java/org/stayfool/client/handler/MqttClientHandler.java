@@ -12,7 +12,7 @@ import org.stayfool.client.message.*;
 import org.stayfool.client.util.ChannelUtil;
 
 /**
- * Created by pactera on 2016/11/17.
+ * @author stayfool
  */
 public class MqttClientHandler extends ChannelInboundHandlerAdapter {
 
@@ -51,7 +51,7 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
                     processPingResp(ctx, (PingRespMessage) message);
                     break;
                 default:
-                    throw new RuntimeException("Unacceptable Message Type");
+                    throw new UnsupportedOperationException("Unacceptable SessionMessage Type");
             }
         } catch (Exception ex) {
             ctx.fireExceptionCaught(ex);
@@ -60,19 +60,15 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
 
     private void processConnAck(ChannelHandlerContext ctx, ConnAckMessage message) {
         if (message.getReturnCode() == ConnAckMessage.CONNECTION_ACCEPTED) {
-            log.debug("{} connect success", ChannelUtil.clientId(ctx.channel()));
             EventManager.notify(new EventKey(EventType.CONNECT_SUCCESS, ChannelUtil.clientId(ctx.channel())), message);
+            log.debug("{} connect success", ChannelUtil.clientId(ctx.channel()));
         } else {
-            log.debug("{} connect failure", ChannelUtil.clientId(ctx.channel()));
             EventManager.notify(new EventKey(EventType.CONNECT_FAILURE, ChannelUtil.clientId(ctx.channel())), message);
+            log.debug("{} connect failure", ChannelUtil.clientId(ctx.channel()));
         }
     }
 
     private void processPublish(ChannelHandlerContext ctx, PublishMessage message) {
-
-        byte[] msg = new byte[message.getPayload().remaining()];
-        message.getPayload().get(msg);
-        log.debug("accept message : topic-{}; content-{}", message.getTopicName(), new String(msg, CharsetUtil.UTF_8));
 
         EventManager.notify(new EventKey(EventType.MESSAGE_ARRIVE, ChannelUtil.clientId(ctx.channel())), message);
 
@@ -90,6 +86,9 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
             }
         }
 
+        byte[] msg = new byte[message.getPayload().remaining()];
+        message.getPayload().get(msg);
+        log.debug("accept message : topic-{}; content-{}", message.getTopicName(), new String(msg, CharsetUtil.UTF_8));
     }
 
     private void processPubAck(ChannelHandlerContext ctx, PubAckMessage message) {
@@ -99,21 +98,17 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void processPubRec(ChannelHandlerContext ctx, PubRecMessage message) {
-        if (message.getQos() == QOSType.EXACTLY_ONCE) {
-            PubRelMessage pubRel = new PubRelMessage();
-            pubRel.setMessageID(message.getMessageID());
-            pubRel.setQos(message.getQos());
-            ctx.channel().writeAndFlush(pubRel);
-        }
+        PubRelMessage pubRel = new PubRelMessage();
+        pubRel.setMessageID(message.getMessageID());
+        pubRel.setQos(message.getQos());
+        ctx.channel().writeAndFlush(pubRel);
     }
 
     private void processPubRel(ChannelHandlerContext ctx, PubRelMessage message) {
-        if (message.getQos() == QOSType.EXACTLY_ONCE) {
-            PubCompMessage pubComp = new PubCompMessage();
-            pubComp.setMessageID(message.getMessageID());
-            pubComp.setQos(message.getQos());
-            ctx.channel().writeAndFlush(pubComp);
-        }
+        PubCompMessage pubComp = new PubCompMessage();
+        pubComp.setMessageID(message.getMessageID());
+        pubComp.setQos(message.getQos());
+        ctx.channel().writeAndFlush(pubComp);
     }
 
     private void processPubComp(ChannelHandlerContext ctx, PubCompMessage message) {
@@ -134,10 +129,10 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
             }
         }
         if (success) {
-            EventManager.notify(new EventKey(EventType.SUBSCRIBE_SUCCESS, ChannelUtil.clientId(ctx.channel())), message);
+            EventManager.notify(new EventKey(EventType.SUBSCRIBE_SUCCESS, ChannelUtil.clientId(ctx.channel())), "");
             log.debug("subscribe success : {} ", ChannelUtil.clientId(ctx.channel()));
         } else {
-            EventManager.notify(new EventKey(EventType.SUBSCRIBE_FAILURE, ChannelUtil.clientId(ctx.channel())), message);
+            EventManager.notify(new EventKey(EventType.SUBSCRIBE_FAILURE, ChannelUtil.clientId(ctx.channel())), "");
             log.debug("subscribe failure : {} ", ChannelUtil.clientId(ctx.channel()));
         }
     }
@@ -147,20 +142,23 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
         log.debug("unsubscribe success : {} ", ChannelUtil.clientId(ctx.channel()));
     }
 
+    @SuppressWarnings("unused")
     private void processPingResp(ChannelHandlerContext ctx, PingRespMessage message) {
 //        log.debug("unsubscribe success : {} ", ChannelUtil.clientId(ctx.channel()));
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        log.error("bad thing happened : ", cause);
         ctx.close();
+        EventManager.notify(new EventKey(EventType.DIS_CONNECT, ChannelUtil.clientId(ctx.channel())), cause);
+        log.error("bad thing happened : ", cause);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ctx.close();
-        log.error("lose connecttion : {}", ChannelUtil.clientId(ctx.channel()));
+        EventManager.notify(new EventKey(EventType.DIS_CONNECT, ChannelUtil.clientId(ctx.channel())), "tcp connection broken");
+        log.error("lose connection : {}", ChannelUtil.clientId(ctx.channel()));
     }
 
 }
