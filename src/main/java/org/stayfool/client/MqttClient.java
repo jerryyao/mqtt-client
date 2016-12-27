@@ -1,6 +1,8 @@
 package org.stayfool.client;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -8,6 +10,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.mqtt.*;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
@@ -19,18 +22,16 @@ import org.stayfool.client.event.EventManager;
 import org.stayfool.client.event.EventType;
 import org.stayfool.client.handler.HeartBeatHandler;
 import org.stayfool.client.handler.MqttClientHandler;
-import org.stayfool.client.message.*;
-import org.stayfool.client.parser.MQTTDecoder;
-import org.stayfool.client.parser.MQTTEncoder;
-import org.stayfool.client.session.Session;
 import org.stayfool.client.session.SessionManager;
 import org.stayfool.client.util.ChannelUtil;
+import org.stayfool.client.util.FixHeaderUtil;
 import org.stayfool.client.util.IDUtil;
 
 import javax.net.ssl.*;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.security.KeyStore;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -49,7 +50,7 @@ public class MqttClient {
     private Bootstrap priBoot;
     private Channel channel;
     private boolean isConnect;
-    private MqttOption option;
+    private final MqttOption option;
 
     public MqttClient(MqttOption option) {
         if (option == null || !option.validate())
@@ -72,7 +73,7 @@ public class MqttClient {
      * @param topic 主题
      * @param qos   qos
      */
-    public void subscribe(String topic, QOSType qos) {
+    public void subscribe(String topic, MqttQoS qos) {
         subscribe(new String[]{topic}, qos);
     }
 
@@ -82,16 +83,25 @@ public class MqttClient {
      * @param filters 主题表达式
      * @param qos     qos
      */
-    public void subscribe(String[] filters, QOSType qos) {
+    public void subscribe(String[] filters, MqttQoS qos) {
         checkConnect();
 
-        SubscribeMessage msg = new SubscribeMessage();
-        msg.setMessageID(IDUtil.nextAvailableId(option.clientId()));
+        List<MqttTopicSubscription> topicList = new ArrayList<>();
         for (String topic : filters)
-            msg.addSubscription(new SubscribeMessage.Couple(qos.byteValue(), topic));
+            topicList.add(new MqttTopicSubscription(topic, qos));
+
+        MqttFixedHeader fixedHeader = FixHeaderUtil.from(MqttMessageType.SUBSCRIBE);
+        MqttMessageIdVariableHeader variableHeader = MqttMessageIdVariableHeader.from(IDUtil.nextAvailableId(option.clientId()));
+        MqttSubscribePayload payload = new MqttSubscribePayload(topicList);
+        MqttSubscribeMessage msg = new MqttSubscribeMessage(fixedHeader, variableHeader, payload);
 
         sendMessage(msg);
 
+        SessionManager.getSession(option.clientId()).waitingConfirm(msg);
+        EventManager.register(new EventKey(EventType.SUBSCRIBE_COMPLETE, option.clientId()), (message) -> {
+            MqttSubAckMessage ack = (MqttSubAckMessage) message;
+            SessionManager.getSession(option.clientId()).confirmMessage(ack.variableHeader().messageId());
+        });
     }
 
     /**
@@ -102,22 +112,31 @@ public class MqttClient {
      * @param retain  是否保存
      * @param contect 消息内容
      */
-    public void publish(String topic, QOSType qos, boolean retain, String contect) {
+    public void publish(String topic, MqttQoS qos, boolean retain, String contect) {
         checkConnect();
 
-        PublishMessage msg = new PublishMessage();
-        msg.setMessageID(IDUtil.nextAvailableId(option.clientId()));
-        msg.setQos(qos);
-        msg.setTopicName(topic);
-        msg.setPayload(ByteBuffer.wrap(contect.getBytes(CharsetUtil.UTF_8)));
-        msg.setRetainFlag(retain);
+        MqttFixedHeader fixedHeader = new MqttFixedHeader(
+                MqttMessageType.PUBLISH,
+                false,
+                qos,
+                retain,
+                0
+        );
+        MqttPublishVariableHeader variableHeader = new MqttPublishVariableHeader(
+                topic,
+                IDUtil.nextAvailableId(option.clientId())
+        );
+
+        ByteBuf payload = Unpooled.wrappedBuffer(contect.getBytes(CharsetUtil.UTF_8));
+
+        MqttPublishMessage msg = new MqttPublishMessage(fixedHeader, variableHeader, payload);
 
         sendMessage(msg);
 
-        if (qos.byteValue() > QOSType.MOST_ONE.byteValue()) {
-            SessionManager.getSession(option.clientId()).waitingForCommit(msg.getMessageID(), msg);
+        if (qos.value() > MqttQoS.AT_MOST_ONCE.value()) {
+            SessionManager.getSession(option.clientId()).waitingConfirm(msg);
             EventManager.register(new EventKey(EventType.PUBLIST_COMPLETE, option.clientId()), msgAck ->
-                    SessionManager.getSession(option.clientId()).commit(msg.getMessageID()));
+                    SessionManager.getSession(option.clientId()).confirmMessage(msg.variableHeader().messageId()));
         }
     }
 
@@ -137,14 +156,19 @@ public class MqttClient {
      */
     public void unsubscribe(String[] filters) {
         checkConnect();
+        MqttFixedHeader fixedHeader = FixHeaderUtil.from(MqttMessageType.UNSUBSCRIBE);
+        MqttMessageIdVariableHeader variableHeader = MqttMessageIdVariableHeader.from(IDUtil.nextAvailableId(option.clientId()));
+        MqttUnsubscribePayload payload = new MqttUnsubscribePayload(Arrays.asList(filters));
 
-        UnsubscribeMessage msg = new UnsubscribeMessage();
-        msg.setMessageID(Long.valueOf(System.currentTimeMillis()).intValue());
-        for (String topic : filters) {
-            msg.addTopicFilter(topic);
-        }
+        MqttUnsubscribeMessage msg = new MqttUnsubscribeMessage(fixedHeader, variableHeader, payload);
 
         sendMessage(msg);
+
+        SessionManager.getSession(option.clientId()).waitingConfirm(msg);
+        EventManager.register(new EventKey(EventType.UNSUBSCRIBE_SUCCESS, option.clientId()), (message) -> {
+            MqttUnsubAckMessage ack = (MqttUnsubAckMessage) message;
+            SessionManager.getSession(option.clientId()).confirmMessage(ack.variableHeader().messageId());
+        });
     }
 
     /**
@@ -152,7 +176,7 @@ public class MqttClient {
      */
     public void disconnect() {
         checkConnect();
-        sendMessage(new DisconnectMessage());
+        sendMessage(new MqttMessage(FixHeaderUtil.from(MqttMessageType.DISCONNECT)));
         SessionManager.removeSession(option.clientId());
     }
 
@@ -193,27 +217,36 @@ public class MqttClient {
         EventManager.unregister(key);
     }
 
+    /**
+     * 返回client的配置
+     *
+     * @return {@link MqttOption}
+     */
+    public MqttOption option() {
+        return option;
+    }
+
     private void doConnect() {
-        ConnectMessage msg = new ConnectMessage();
-        msg.setProtocolVersion((byte) 4);
-        msg.setClientID(option.clientId());
-        msg.setCleanSession(option.cleanSession());
-        msg.setKeepAlive(option.keepAlive()); // secs
-        msg.setWillFlag(option.willFlag());
-
-        if (option.hasUserInfo()) {
-            msg.setUserFlag(true);
-            msg.setPasswordFlag(true);
-            msg.setUsername(option.username());
-            msg.setPassword(option.password().getBytes());
-        }
-
-        if (option.willFlag()) {
-            msg.setWillQos(option.willQos().byteValue());
-            msg.setWillRetain(option.willRetain());
-            msg.setWillTopic(option.willTopic());
-            msg.setWillMessage(option.willMessage().getBytes(CharsetUtil.UTF_8));
-        }
+        MqttFixedHeader fixedHeader = FixHeaderUtil.from(MqttMessageType.CONNECT);
+        MqttConnectVariableHeader variableHeader = new MqttConnectVariableHeader(
+                MqttVersion.MQTT_3_1_1.protocolName(),
+                MqttVersion.MQTT_3_1_1.protocolLevel(),
+                option.hasUserInfo(),
+                option.hasUserInfo(),
+                option.willRetain(),
+                option.willQos().value(),
+                option.willFlag(),
+                option.cleanSession(),
+                option.keepAlive()
+        );
+        MqttConnectPayload payload = new MqttConnectPayload(
+                option.clientId(),
+                option.willTopic(),
+                option.willMessage(),
+                option.username(),
+                option.password()
+        );
+        MqttConnectMessage msg = new MqttConnectMessage(fixedHeader, variableHeader, payload);
 
         sendMessage(msg);
 
@@ -221,10 +254,7 @@ public class MqttClient {
 
         isConnect = true;
 
-        Session session = SessionManager.createSession(option.clientId());
-        session.clientId(option.clientId());
-        session.channel(channel);
-        session.connect();
+        SessionManager.createSession(option.clientId());
     }
 
     private void initBoot() {
@@ -257,8 +287,8 @@ public class MqttClient {
                     ChannelPipeline pipeline = ch.pipeline();
                     pipeline.addFirst(new HeartBeatHandler());
                     pipeline.addFirst(new IdleStateHandler(0, 0, option.keepAlive()));
-                    pipeline.addLast(new MQTTDecoder());
-                    pipeline.addLast(new MQTTEncoder());
+                    pipeline.addLast(new MqttDecoder());
+                    pipeline.addLast(MqttEncoder.INSTANCE);
                     pipeline.addLast(new MqttClientHandler());
 
                     // 如果配置了SSL相关信息，则加入SslHandler
@@ -329,7 +359,7 @@ public class MqttClient {
         assert isConnect;
     }
 
-    private void sendMessage(AbstractMessage msg) {
+    private void sendMessage(MqttMessage msg) {
         channel.writeAndFlush(msg);
     }
 
@@ -340,18 +370,6 @@ public class MqttClient {
             connectLatch.await();
         } catch (InterruptedException e) {
             log.error("sync {} failed, cause : {} ", event, e);
-        }
-    }
-
-    private void syncOr(List<EventKey> eventKeys) {
-
-        final CountDownLatch connectLatch = new CountDownLatch(1);
-
-        eventKeys.forEach(key -> EventManager.register(key, (msg) -> connectLatch.countDown()));
-        try {
-            connectLatch.await();
-        } catch (InterruptedException e) {
-            log.error("sync {} failed, cause : {} ", eventKeys, e);
         }
     }
 

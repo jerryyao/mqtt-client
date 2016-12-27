@@ -1,6 +1,9 @@
 package org.stayfool.client.session;
 
-import io.netty.channel.Channel;
+import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttPublishMessage;
+
+import java.util.List;
 
 /**
  * Created by stayfool on 2016/12/6.
@@ -9,21 +12,15 @@ public interface Session {
 
     String clientId();
 
-    void clientId(String clientId);
+    void retainMessage(MqttPublishMessage msg);
 
-    Channel channel();
+    MqttPublishMessage removeRetain(int id);
 
-    void channel(Channel channel);
+    List<MqttPublishMessage> retainedMessage();
 
-    boolean isActive();
+    void waitingConfirm(MqttMessage msg);
 
-    void connect();
+    MqttMessage confirmMessage(int id);
 
-    void disConnect();
-
-    void waitingForCommit(Integer id, Object msg);
-
-//    void waitingForCommit(Integer id, Object msg, Integer timeout, Boolean reSend);
-
-    void commit(Integer id);
+    List<MqttMessage> waitingConfirmMessage();
 }

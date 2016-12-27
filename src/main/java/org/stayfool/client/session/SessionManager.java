@@ -41,9 +41,8 @@ public final class SessionManager {
      * @return Seesion
      */
     public static Session createSession(String clientId) {
-        MemorySession session = new MemorySession();
-        sessionMap.put(clientId, session);
-
+        MemorySession session = new MemorySession(clientId);
+        sessionMap.putIfAbsent(clientId, session);
         return session;
     }
 }

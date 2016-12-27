@@ -34,7 +34,7 @@ public final class IDUtil {
     }
 
     public static String uuid() {
-        return UUID.randomUUID().toString().replaceAll("-", "");
+        return UUID.randomUUID().toString().replaceAll("-", "").toUpperCase();
     }
 
     private IDUtil() {

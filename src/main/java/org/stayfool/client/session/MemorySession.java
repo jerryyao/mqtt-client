@@ -1,7 +1,11 @@
 package org.stayfool.client.session;
 
-import io.netty.channel.Channel;
+import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
+import io.netty.handler.codec.mqtt.MqttPublishMessage;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -10,45 +14,51 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class MemorySession implements Session {
 
-    private boolean isConnect;
     private String clientId;
-    private Channel channel;
-    private ConcurrentMap<Integer, Object> waittingForCommit = new ConcurrentHashMap<>();
+    private ConcurrentMap<Integer, MqttMessage> waitingForConfirmMap = new ConcurrentHashMap<>();
+    private ConcurrentMap<Integer, MqttPublishMessage> retainedMap = new ConcurrentHashMap<>();
 
+    public MemorySession(String clientId) {
+        this.clientId = clientId;
+    }
+
+    @Override
     public String clientId() {
         return clientId;
     }
 
-    public void clientId(String clientId) {
-        this.clientId = clientId;
+    @Override
+    public void retainMessage(MqttPublishMessage msg) {
+        retainedMap.put(msg.variableHeader().messageId(), msg);
     }
 
-    public Channel channel() {
-        return channel;
+    @Override
+    public MqttPublishMessage removeRetain(int id) {
+        return retainedMap.remove(id);
     }
 
-    public void channel(Channel channel) {
-        this.channel = channel;
+    @Override
+    public List<MqttPublishMessage> retainedMessage() {
+        return new ArrayList<>(retainedMap.values());
     }
 
-    public void connect() {
-        isConnect = true;
+    @Override
+    public void waitingConfirm(MqttMessage msg) {
+        waitingForConfirmMap.put(getId(msg), msg);
     }
 
-    public void disConnect() {
-        isConnect = false;
+    @Override
+    public MqttMessage confirmMessage(int id) {
+        return waitingForConfirmMap.remove(id);
     }
 
-    public boolean isActive() {
-        return isConnect;
+    @Override
+    public List<MqttMessage> waitingConfirmMessage() {
+        return new ArrayList<>(waitingForConfirmMap.values());
     }
 
-    public void waitingForCommit(Integer id, Object msg) {
-        waittingForCommit.put(id, msg);
+    private int getId(MqttMessage msg) {
+        MqttMessageIdVariableHeader variableHeader = (MqttMessageIdVariableHeader) msg.variableHeader();
+        return variableHeader.messageId();
     }
-
-    public void commit(Integer id) {
-        waittingForCommit.remove(id);
-    }
-
 }

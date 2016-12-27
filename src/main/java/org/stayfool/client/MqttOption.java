@@ -1,7 +1,8 @@
 package org.stayfool.client;
 
+import io.netty.handler.codec.mqtt.MqttQoS;
 import io.netty.util.internal.StringUtil;
-import org.stayfool.client.message.QOSType;
+import org.stayfool.client.util.IDUtil;
 
 /**
  * Created by stayfool on 2016/11/30.
@@ -17,7 +18,7 @@ public class MqttOption {
     public static final String JKS = "JKS";
 
     // client common info
-    private String clientId = String.valueOf(System.currentTimeMillis());
+    private String clientId = IDUtil.uuid();
     private boolean shareBoot = true;
     private String host;
     private int port;
@@ -26,7 +27,7 @@ public class MqttOption {
     private int keepAlive = 30;
     private boolean cleanSession = true;
     private boolean willFlag = false;
-    private QOSType willQos;
+    private MqttQoS willQos;
     private boolean willRetain = false;
     private String willTopic;
     private String willMessage;
@@ -81,7 +82,7 @@ public class MqttOption {
         return this;
     }
 
-    public MqttOption willQos(QOSType willQos) {
+    public MqttOption willQos(MqttQoS willQos) {
         this.willQos = willQos;
         return this;
     }
@@ -152,7 +153,7 @@ public class MqttOption {
         return willFlag;
     }
 
-    public QOSType willQos() {
+    public MqttQoS willQos() {
         return willQos;
     }
 

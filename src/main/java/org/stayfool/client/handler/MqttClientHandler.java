@@ -1,17 +1,19 @@
 package org.stayfool.client.handler;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.UnsupportedMessageTypeException;
+import io.netty.handler.codec.mqtt.*;
 import io.netty.util.CharsetUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.stayfool.client.event.EventKey;
 import org.stayfool.client.event.EventManager;
 import org.stayfool.client.event.EventType;
-import org.stayfool.client.message.*;
+import org.stayfool.client.session.SessionManager;
 import org.stayfool.client.util.ChannelUtil;
-
-import java.nio.ByteBuffer;
+import org.stayfool.client.util.FixHeaderUtil;
 
 /**
  * @author stayfool
@@ -22,46 +24,47 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        AbstractMessage message = (AbstractMessage) msg;
+        MqttMessage message = (MqttMessage) msg;
         try {
-            switch (message.getMessageType()) {
-                case MessageType.CONNACK:
-                    processConnAck(ctx, (ConnAckMessage) message);
+            switch (message.fixedHeader().messageType()) {
+                case CONNACK:
+                    processConnAck(ctx, (MqttConnAckMessage) message);
                     break;
-                case MessageType.PUBLISH:
-                    processPublish(ctx, (PublishMessage) message);
+                case PUBLISH:
+                    processPublish(ctx, (MqttPublishMessage) message);
                     break;
-                case MessageType.PUBACK:
-                    processPubAck(ctx, (PubAckMessage) message);
+                case PUBACK:
+                    processPubAck(ctx, (MqttPubAckMessage) message);
                     break;
-                case MessageType.PUBREC:
-                    processPubRec(ctx, (PubRecMessage) message);
+                case PUBREC:
+                    processPubRec(ctx, (MqttPubAckMessage) message);
                     break;
-                case MessageType.PUBREL:
-                    processPubRel(ctx, (PubRelMessage) message);
+                case PUBREL:
+                    processPubRel(ctx, (MqttPubAckMessage) message);
                     break;
-                case MessageType.PUBCOMP:
-                    processPubComp(ctx, (PubCompMessage) message);
+                case PUBCOMP:
+                    processPubComp(ctx, (MqttPubAckMessage) message);
                     break;
-                case MessageType.SUBACK:
-                    processSubAck(ctx, (SubAckMessage) message);
+                case SUBACK:
+                    processSubAck(ctx, (MqttSubAckMessage) message);
                     break;
-                case MessageType.UNSUBACK:
-                    processUnsbAck(ctx, (UnsubAckMessage) message);
+                case UNSUBACK:
+                    processUnsbAck(ctx, (MqttUnsubAckMessage) message);
                     break;
-                case MessageType.PINGRESP:
-                    processPingResp(ctx, (PingRespMessage) message);
+                case PINGRESP:
+                    processPingResp(ctx, message);
                     break;
                 default:
-                    throw new UnsupportedOperationException("Unacceptable SessionMessage Type");
+                    throw new UnsupportedMessageTypeException("Unacceptable Message Type");
             }
         } catch (Exception ex) {
             ctx.fireExceptionCaught(ex);
         }
     }
 
-    private void processConnAck(ChannelHandlerContext ctx, ConnAckMessage message) {
-        if (message.getReturnCode() == ConnAckMessage.CONNECTION_ACCEPTED) {
+    private void processConnAck(ChannelHandlerContext ctx, MqttConnAckMessage message) {
+
+        if (message.variableHeader().connectReturnCode().equals(MqttConnectReturnCode.CONNECTION_ACCEPTED)) {
             EventManager.notify(new EventKey(EventType.CONNECT_SUCCESS, ChannelUtil.clientId(ctx.channel())), message);
             log.debug("{} connect success", ChannelUtil.clientId(ctx.channel()));
         } else {
@@ -70,62 +73,63 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void processPublish(ChannelHandlerContext ctx, PublishMessage message) {
+    private void processPublish(ChannelHandlerContext ctx, MqttPublishMessage message) {
 
         EventManager.notify(new EventKey(EventType.MESSAGE_ARRIVE, ChannelUtil.clientId(ctx.channel())), message);
 
-        if (message.getQos().byteValue() > QOSType.MOST_ONE.byteValue()) {
-            if (message.getQos() == QOSType.LEAST_ONE) {
-                PubAckMessage pubAck = new PubAckMessage();
-                pubAck.setMessageID(message.getMessageID());
-                pubAck.setQos(message.getQos());
-                ctx.channel().writeAndFlush(pubAck);
-            } else {
-                PubRecMessage pubRec = new PubRecMessage();
-                pubRec.setMessageID(message.getMessageID());
-                pubRec.setQos(message.getQos());
-                ctx.channel().writeAndFlush(pubRec);
-            }
+        MqttQoS qos = message.fixedHeader().qosLevel();
+
+        if (qos.equals(MqttQoS.AT_LEAST_ONCE)) {
+            MqttFixedHeader fixedHeader = FixHeaderUtil.from(MqttMessageType.PUBACK);
+            MqttMessageIdVariableHeader variableHeader = MqttMessageIdVariableHeader.from(message.variableHeader().messageId());
+            MqttPubAckMessage pubAck = new MqttPubAckMessage(fixedHeader, variableHeader);
+            ctx.channel().writeAndFlush(pubAck);
+        } else if (qos.equals(MqttQoS.EXACTLY_ONCE)) {
+            MqttFixedHeader fixedHeader = FixHeaderUtil.from(MqttMessageType.PUBREC);
+            MqttMessageIdVariableHeader variableHeader = MqttMessageIdVariableHeader.from(message.variableHeader().messageId());
+            MqttPubAckMessage pubRec = new MqttPubAckMessage(fixedHeader, variableHeader);
+            ctx.channel().writeAndFlush(pubRec);
         }
 
-        ByteBuffer bb = message.getPayload().duplicate();
-        byte[] msg = new byte[bb.remaining()];
-        bb.get(msg);
-        log.debug("accept message : topic-{}; content-{}", message.getTopicName(), new String(msg, CharsetUtil.UTF_8));
+        if (message.fixedHeader().isRetain()) {
+            SessionManager.getSession(ChannelUtil.clientId(ctx.channel())).retainMessage(message);
+        }
+
+        ByteBuf bb = message.payload().duplicate();
+        byte[] msg = new byte[bb.readableBytes()];
+        bb.readBytes(msg);
+        log.debug("accept message : topic-{}; content-{}", message.variableHeader().topicName(), new String(msg, CharsetUtil.UTF_8));
     }
 
-    private void processPubAck(ChannelHandlerContext ctx, PubAckMessage message) {
-
+    private void processPubAck(ChannelHandlerContext ctx, MqttPubAckMessage message) {
         EventManager.notify(new EventKey(EventType.PUBLISH_SUCCESS, ChannelUtil.clientId(ctx.channel())), message);
         log.debug("publish success : {}", ChannelUtil.clientId(ctx.channel()));
     }
 
-    private void processPubRec(ChannelHandlerContext ctx, PubRecMessage message) {
-        PubRelMessage pubRel = new PubRelMessage();
-        pubRel.setMessageID(message.getMessageID());
-        pubRel.setQos(message.getQos());
+    private void processPubRec(ChannelHandlerContext ctx, MqttPubAckMessage message) {
+        MqttFixedHeader fixedHeader = FixHeaderUtil.from(MqttMessageType.PUBREL);
+        MqttPubAckMessage pubRel = new MqttPubAckMessage(fixedHeader, message.variableHeader());
         ctx.channel().writeAndFlush(pubRel);
     }
 
-    private void processPubRel(ChannelHandlerContext ctx, PubRelMessage message) {
-        PubCompMessage pubComp = new PubCompMessage();
-        pubComp.setMessageID(message.getMessageID());
-        pubComp.setQos(message.getQos());
+    private void processPubRel(ChannelHandlerContext ctx, MqttPubAckMessage message) {
+        MqttFixedHeader fixedHeader = FixHeaderUtil.from(MqttMessageType.PUBCOMP);
+        MqttPubAckMessage pubComp = new MqttPubAckMessage(fixedHeader, message.variableHeader());
         ctx.channel().writeAndFlush(pubComp);
     }
 
-    private void processPubComp(ChannelHandlerContext ctx, PubCompMessage message) {
+    private void processPubComp(ChannelHandlerContext ctx, MqttPubAckMessage message) {
         EventManager.notify(new EventKey(EventType.PUBLISH_SUCCESS, ChannelUtil.clientId(ctx.channel())), message);
         log.debug("publish success : {}", ChannelUtil.clientId(ctx.channel()));
     }
 
-    private void processSubAck(ChannelHandlerContext ctx, SubAckMessage message) {
+    private void processSubAck(ChannelHandlerContext ctx, MqttSubAckMessage message) {
         boolean success = true;
-        if (message.types().isEmpty())
+        if (message.payload().grantedQoSLevels().isEmpty())
             success = false;
         if (success) {
-            for (QOSType qosType : message.types()) {
-                if (qosType.equals(QOSType.FAILURE)) {
+            for (int qos : message.payload().grantedQoSLevels()) {
+                if (MqttQoS.FAILURE.equals(MqttQoS.valueOf(qos))) {
                     success = false;
                     break;
                 }
@@ -140,20 +144,19 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void processUnsbAck(ChannelHandlerContext ctx, UnsubAckMessage message) {
+    private void processUnsbAck(ChannelHandlerContext ctx, MqttUnsubAckMessage message) {
         EventManager.notify(new EventKey(EventType.UNSUBSCRIBE_SUCCESS, ChannelUtil.clientId(ctx.channel())), message);
         log.debug("unsubscribe success : {} ", ChannelUtil.clientId(ctx.channel()));
     }
 
     @SuppressWarnings("unused")
-    private void processPingResp(ChannelHandlerContext ctx, PingRespMessage message) {
+    private void processPingResp(ChannelHandlerContext ctx, MqttMessage message) {
 //        log.debug("unsubscribe success : {} ", ChannelUtil.clientId(ctx.channel()));
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         ctx.close();
-        EventManager.notify(new EventKey(EventType.DIS_CONNECT, ChannelUtil.clientId(ctx.channel())), cause);
         log.error("bad thing happened : ", cause);
     }
 
