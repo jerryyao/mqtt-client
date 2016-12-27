@@ -1,14 +1,14 @@
 package org.stayfool.mqtt.test;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.mqtt.MqttPublishMessage;
+import io.netty.handler.codec.mqtt.MqttQoS;
+import io.netty.util.CharsetUtil;
 import org.junit.Test;
 import org.stayfool.client.MqttClient;
 import org.stayfool.client.MqttOption;
 import org.stayfool.client.event.EventKey;
 import org.stayfool.client.event.EventType;
-import org.stayfool.client.message.PublishMessage;
-import org.stayfool.client.message.QOSType;
-
-import java.nio.ByteBuffer;
 
 /**
  * Created by stayfool on 2016/12/7.
@@ -41,24 +41,20 @@ public class DeviceSimulate {
         MqttClient client = new MqttClient(option);
 
         client.addCallback(new EventKey(EventType.MESSAGE_ARRIVE, clientId), (msg) -> {
-            ByteBuffer buffer = ((PublishMessage) msg).getPayload();
-            byte[] bytes = new byte[buffer.remaining()];
-            deviceId = new String(bytes);
-            System.out.println(deviceId);
+            ByteBuf b = ((MqttPublishMessage) msg).payload();
+            System.out.println(b.toString(CharsetUtil.UTF_8));
             client.removeCallback(new EventKey(EventType.MESSAGE_ARRIVE, clientId));
         });
 
         client.connect();
 
         client.addCallback(new EventKey(EventType.MESSAGE_ARRIVE, client.getClientId()), (msg) -> {
-            ByteBuffer b = ((PublishMessage) msg).getPayload();
-            byte[] bs = new byte[b.remaining()];
-            b.get(bs);
-            System.out.println(new String(bs));
+            ByteBuf b = ((MqttPublishMessage) msg).payload();
+            System.out.println(b.toString(CharsetUtil.UTF_8));
         });
 
-        client.subscribe(cmd,QOSType.LEAST_ONE);
-        client.publish(topic, QOSType.LEAST_ONE, false, "{\"id\":\"client connect\",\"content\":\"I am in!\"}");
+        client.subscribe(cmd, MqttQoS.AT_LEAST_ONCE);
+        client.publish(topic, MqttQoS.AT_LEAST_ONCE, false, "{\"id\":\"client connect\",\"content\":\"I am in!\"}");
 
         while (true) {
 

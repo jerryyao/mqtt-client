@@ -1,15 +1,15 @@
 package org.stayfool.mqtt.test;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.mqtt.MqttPublishMessage;
+import io.netty.handler.codec.mqtt.MqttQoS;
+import io.netty.util.CharsetUtil;
 import org.junit.Test;
 import org.stayfool.client.MqttClient;
 import org.stayfool.client.MqttOption;
 import org.stayfool.client.event.EventKey;
 import org.stayfool.client.event.EventType;
-import org.stayfool.client.message.PublishMessage;
-import org.stayfool.client.message.QOSType;
 import org.stayfool.client.util.IDUtil;
-
-import java.nio.ByteBuffer;
 
 /**
  * Created on 2016/12/26.
@@ -35,19 +35,17 @@ public class RefactorTest {
         MqttClient client = new MqttClient(option);
 
         client.addCallback(new EventKey(EventType.MESSAGE_ARRIVE, option.clientId()), (msg) -> {
-            ByteBuffer buffer = ((PublishMessage) msg).getPayload().duplicate();
-            byte[] bytes = new byte[buffer.remaining()];
-            buffer.get(bytes);
-            System.err.println(new String(bytes));
+            ByteBuf b = ((MqttPublishMessage) msg).payload();
+            System.out.println(b.toString(CharsetUtil.UTF_8));
         });
 
         client.connect();
-        client.subscribe(topic1, QOSType.LEAST_ONE);
+        client.subscribe(topic1, MqttQoS.AT_LEAST_ONCE);
 
-        client.publish(topic2, QOSType.LEAST_ONE, false, "refactortest level 0");
-        client.publish(topic3, QOSType.LEAST_ONE, false, "refactortest level 1");
-        client.publish(topic4, QOSType.LEAST_ONE, false, "refactortest level 2");
-        client.publish(topic5, QOSType.LEAST_ONE, false, "refactortest level 3");
+        client.publish(topic2, MqttQoS.AT_LEAST_ONCE, false, "refactortest level 0");
+        client.publish(topic3, MqttQoS.AT_LEAST_ONCE, false, "refactortest level 1");
+        client.publish(topic4, MqttQoS.AT_LEAST_ONCE, false, "refactortest level 2");
+        client.publish(topic5, MqttQoS.AT_LEAST_ONCE, false, "refactortest level 3");
 
         while (true) {
 
