@@ -33,6 +33,7 @@ import java.nio.ByteBuffer;
 import java.security.KeyStore;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Created by pactera on 2016/11/30.
@@ -43,7 +44,9 @@ public class MqttClient {
 
     private Logger log = LoggerFactory.getLogger(getClass());
 
+    private static final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private static volatile Bootstrap boot;
+    private Bootstrap priBoot;
     private Channel channel;
     private boolean isConnect;
     private MqttOption option;
@@ -198,6 +201,13 @@ public class MqttClient {
         msg.setKeepAlive(option.keepAlive()); // secs
         msg.setWillFlag(option.willFlag());
 
+        if (option.hasUserInfo()) {
+            msg.setUserFlag(true);
+            msg.setPasswordFlag(true);
+            msg.setUsername(option.username());
+            msg.setPassword(option.password().getBytes());
+        }
+
         if (option.willFlag()) {
             msg.setWillQos(option.willQos().byteValue());
             msg.setWillRetain(option.willRetain());
@@ -219,11 +229,24 @@ public class MqttClient {
 
     private void initBoot() {
 
-        if (boot != null && option.shareBoot())
-            return;
-
         NioEventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
+            lock.readLock().lock();
+            if (boot != null && option.shareBoot()) {
+                priBoot = boot;
+                lock.readLock().unlock();
+                return;
+            }
+
+            lock.readLock().unlock();
+            lock.writeLock().lock();
+
+            if (boot != null && option.shareBoot()) {
+                priBoot = boot;
+                lock.writeLock().unlock();
+                return;
+            }
+
             boot = new Bootstrap();
             boot.group(workerGroup);
             boot.channel(NioSocketChannel.class);
@@ -242,6 +265,9 @@ public class MqttClient {
                     initSSL(pipeline);
                 }
             });
+
+            priBoot = boot;
+            lock.writeLock().unlock();
         } catch (Exception ex) {
             try {
                 workerGroup.shutdownGracefully().sync();
@@ -251,11 +277,12 @@ public class MqttClient {
             log.error("init bootstrap failed", ex);
             exit();
         }
+
     }
 
     private void initChannel() {
         try {
-            channel = boot.connect(option.host(), option.port()).sync().channel();
+            channel = priBoot.connect(option.host(), option.port()).sync().channel();
             ChannelUtil.clientId(channel, option.clientId());
 
             Thread.sleep(5000);
@@ -267,7 +294,7 @@ public class MqttClient {
 
     private void initSSL(ChannelPipeline pipeline) {
 
-        if (!option.useSSL())
+        if (!option.hasSslInfo())
             return;
 
         TrustManagerFactory tmf = null;

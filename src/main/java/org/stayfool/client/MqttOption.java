@@ -36,7 +36,6 @@ public class MqttOption {
     private String keyPass;
     private boolean clientMode = true;
 
-
     public MqttOption clientId(String clientId) {
         this.clientId = clientId;
         return this;
@@ -185,8 +184,12 @@ public class MqttOption {
         return !(port <= 0 || StringUtil.isNullOrEmpty(host));
     }
 
-    public boolean useSSL() {
+    public boolean hasSslInfo() {
         return !(StringUtil.isNullOrEmpty(keyPath) || StringUtil.isNullOrEmpty(keyPass));
+    }
+
+    public boolean hasUserInfo() {
+        return !(StringUtil.isNullOrEmpty(username) || StringUtil.isNullOrEmpty(password));
     }
 
     private MqttOption() {

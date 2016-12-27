@@ -11,6 +11,8 @@ import org.stayfool.client.event.EventType;
 import org.stayfool.client.message.*;
 import org.stayfool.client.util.ChannelUtil;
 
+import java.nio.ByteBuffer;
+
 /**
  * @author stayfool
  */
@@ -86,8 +88,9 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
             }
         }
 
-        byte[] msg = new byte[message.getPayload().remaining()];
-        message.getPayload().get(msg);
+        ByteBuffer bb = message.getPayload().duplicate();
+        byte[] msg = new byte[bb.remaining()];
+        bb.get(msg);
         log.debug("accept message : topic-{}; content-{}", message.getTopicName(), new String(msg, CharsetUtil.UTF_8));
     }
 
