@@ -23,14 +23,14 @@ public final class IDUtil {
 
         if (idMap.containsKey(clientId)) {
             AtomicInteger messageIdHolder = idMap.get(clientId);
-            messageIdHolder.compareAndSet(Integer.MAX_VALUE, Integer.MIN_VALUE);
-            return messageIdHolder.getAndIncrement();
+            messageIdHolder.compareAndSet(Integer.MAX_VALUE, 0);
+            return messageIdHolder.incrementAndGet();
         }
 
-        AtomicInteger messageIdHolder = new AtomicInteger(Integer.MIN_VALUE);
+        AtomicInteger messageIdHolder = new AtomicInteger(0);
         idMap.put(clientId, messageIdHolder);
 
-        return messageIdHolder.get();
+        return messageIdHolder.incrementAndGet();
     }
 
     public static String uuid() {

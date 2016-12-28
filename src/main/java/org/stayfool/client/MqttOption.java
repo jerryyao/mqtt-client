@@ -21,13 +21,13 @@ public class MqttOption {
     private String clientId = IDUtil.uuid();
     private boolean shareBoot = true;
     private String host;
-    private int port;
+    private int port = 1883;
     private String username;
     private String password;
     private int keepAlive = 30;
     private boolean cleanSession = true;
     private boolean willFlag = false;
-    private MqttQoS willQos;
+    private MqttQoS willQos = MqttQoS.AT_MOST_ONCE;
     private boolean willRetain = false;
     private String willTopic;
     private String willMessage;

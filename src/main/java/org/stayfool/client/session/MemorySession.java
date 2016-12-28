@@ -3,6 +3,7 @@ package org.stayfool.client.session;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
+import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -58,7 +59,10 @@ public class MemorySession implements Session {
     }
 
     private int getId(MqttMessage msg) {
-        MqttMessageIdVariableHeader variableHeader = (MqttMessageIdVariableHeader) msg.variableHeader();
-        return variableHeader.messageId();
+        Object vheader = msg.variableHeader();
+        if (vheader instanceof MqttPublishVariableHeader)
+            return ((MqttPublishVariableHeader) msg.variableHeader()).messageId();
+        else
+            return ((MqttMessageIdVariableHeader) msg.variableHeader()).messageId();
     }
 }

@@ -3,10 +3,7 @@ package org.stayfool.client;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -28,12 +25,16 @@ import org.stayfool.client.util.FixHeaderUtil;
 import org.stayfool.client.util.IDUtil;
 
 import javax.net.ssl.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
@@ -46,7 +47,8 @@ public class MqttClient {
     private Logger log = LoggerFactory.getLogger(getClass());
 
     private static final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-    private static volatile Bootstrap boot;
+    private static final AtomicInteger clientCount = new AtomicInteger(0);
+    private static volatile Bootstrap shareBoot;
     private Bootstrap priBoot;
     private Channel channel;
     private boolean isConnect;
@@ -178,6 +180,7 @@ public class MqttClient {
         checkConnect();
         sendMessage(new MqttMessage(FixHeaderUtil.from(MqttMessageType.DISCONNECT)));
         SessionManager.removeSession(option.clientId());
+        clientCount.decrementAndGet();
     }
 
     /**
@@ -202,19 +205,19 @@ public class MqttClient {
      * when something than the listener intrest happens , listener will be call
      *
      * @param callback callback
-     * @param key      key
+     * @param type     type {@code EventType}
      */
-    public void addCallback(EventKey key, EventCallback callback) {
-        EventManager.register(key, callback);
+    public void addCallback(EventType type, EventCallback callback) {
+        EventManager.register(new EventKey(type, option.clientId()), callback);
     }
 
     /**
      * remove callback
      *
-     * @param key {@code EventKy}
+     * @param type {@code EventType}
      */
-    public void removeCallback(EventKey key) {
-        EventManager.unregister(key);
+    public void removeCallback(EventType type) {
+        EventManager.unregister(new EventKey(type, option.clientId()));
     }
 
     /**
@@ -224,6 +227,17 @@ public class MqttClient {
      */
     public MqttOption option() {
         return option;
+    }
+
+    public void close() {
+        if (isConnect)
+            disconnect();
+        if (!option.shareBoot() || clientCount.get() == 1) {
+            try {
+                priBoot.config().group().shutdownGracefully().sync();
+            } catch (InterruptedException e) {
+            }
+        }
     }
 
     private void doConnect() {
@@ -259,63 +273,54 @@ public class MqttClient {
 
     private void initBoot() {
 
-        NioEventLoopGroup workerGroup = new NioEventLoopGroup();
-        try {
+        if (option.shareBoot()) {
             lock.readLock().lock();
-            if (boot != null && option.shareBoot()) {
-                priBoot = boot;
+            if (shareBoot == null) {
                 lock.readLock().unlock();
-                return;
-            }
-
-            lock.readLock().unlock();
-            lock.writeLock().lock();
-
-            if (boot != null && option.shareBoot()) {
-                priBoot = boot;
-                lock.writeLock().unlock();
-                return;
-            }
-
-            boot = new Bootstrap();
-            boot.group(workerGroup);
-            boot.channel(NioSocketChannel.class);
-            boot.option(ChannelOption.SO_KEEPALIVE, true);
-            boot.handler(new ChannelInitializer<SocketChannel>() {
-                @Override
-                public void initChannel(SocketChannel ch) throws Exception {
-                    ChannelPipeline pipeline = ch.pipeline();
-                    pipeline.addFirst(new HeartBeatHandler());
-                    pipeline.addFirst(new IdleStateHandler(0, 0, option.keepAlive()));
-                    pipeline.addLast(new MqttDecoder());
-                    pipeline.addLast(MqttEncoder.INSTANCE);
-                    pipeline.addLast(new MqttClientHandler());
-
-                    // 如果配置了SSL相关信息，则加入SslHandler
-                    initSSL(pipeline);
+                lock.writeLock().lock();
+                if (shareBoot == null) {
+                    shareBoot = createBoot();
                 }
-            });
-
-            priBoot = boot;
-            lock.writeLock().unlock();
-        } catch (Exception ex) {
-            try {
-                workerGroup.shutdownGracefully().sync();
-            } catch (InterruptedException e) {
-                // 忽略
+                priBoot = shareBoot;
+                lock.writeLock().unlock();
+            } else {
+                priBoot = shareBoot;
+                lock.readLock().unlock();
             }
-            log.error("init bootstrap failed", ex);
-            exit();
+            clientCount.incrementAndGet();
+        } else {
+            priBoot = createBoot();
         }
+    }
 
+    private Bootstrap createBoot() {
+        NioEventLoopGroup workerGroup = new NioEventLoopGroup();
+        Bootstrap boot = new Bootstrap();
+        boot.group(workerGroup);
+        boot.channel(NioSocketChannel.class);
+        boot.option(ChannelOption.SO_KEEPALIVE, true);
+        boot.handler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            public void initChannel(SocketChannel ch) throws Exception {
+                ChannelPipeline pipeline = ch.pipeline();
+                pipeline.addFirst(new HeartBeatHandler());
+                pipeline.addFirst(new IdleStateHandler(0, 0, option.keepAlive()));
+                pipeline.addLast(new MqttDecoder());
+                pipeline.addLast(MqttEncoder.INSTANCE);
+                pipeline.addLast(new MqttClientHandler());
+
+                // 如果配置了SSL相关信息，则加入SslHandler
+                initSSL(pipeline);
+            }
+        });
+
+        return boot;
     }
 
     private void initChannel() {
         try {
             channel = priBoot.connect(option.host(), option.port()).sync().channel();
             ChannelUtil.clientId(channel, option.clientId());
-
-            Thread.sleep(5000);
         } catch (InterruptedException e) {
             log.error("init channel failed", e);
             exit();
@@ -329,12 +334,27 @@ public class MqttClient {
 
         TrustManagerFactory tmf = null;
         KeyManagerFactory kmf = null;
+        InputStream is = null;
 
-        try (InputStream in = Thread.currentThread().getContextClassLoader()
-                .getResourceAsStream(option.keyPath())) {
+        if (option.keyPath().startsWith("classpath:")) {
+            ClassLoader cl = Thread.currentThread().getContextClassLoader();
+            String keyPath = option.keyPath().replace("classpath:", "");
+            is = cl.getResourceAsStream(keyPath);
+        } else {
+            try {
+                is = new FileInputStream(new File(option.keyPath()));
+            } catch (FileNotFoundException e) {
+            }
+        }
 
-            KeyStore ks = KeyStore.getInstance(MqttOption.JKS);
-            ks.load(in, option.keyPass().toCharArray());
+        if (is == null) {
+            log.error("SSL key file not found at : {}", option.keyPath());
+            return;
+        }
+
+        try {
+            KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+            ks.load(is, option.keyPass().toCharArray());
             tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
             tmf.init(ks);
 

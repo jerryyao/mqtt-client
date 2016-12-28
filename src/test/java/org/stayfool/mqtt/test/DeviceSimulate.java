@@ -7,7 +7,6 @@ import io.netty.util.CharsetUtil;
 import org.junit.Test;
 import org.stayfool.client.MqttClient;
 import org.stayfool.client.MqttOption;
-import org.stayfool.client.event.EventKey;
 import org.stayfool.client.event.EventType;
 
 /**
@@ -40,18 +39,12 @@ public class DeviceSimulate {
                 .username(username).password(password);
         MqttClient client = new MqttClient(option);
 
-        client.addCallback(new EventKey(EventType.MESSAGE_ARRIVE, clientId), (msg) -> {
+        client.addCallback(EventType.MESSAGE_ARRIVE, (msg) -> {
             ByteBuf b = ((MqttPublishMessage) msg).payload();
             System.out.println(b.toString(CharsetUtil.UTF_8));
-            client.removeCallback(new EventKey(EventType.MESSAGE_ARRIVE, clientId));
         });
 
         client.connect();
-
-        client.addCallback(new EventKey(EventType.MESSAGE_ARRIVE, client.getClientId()), (msg) -> {
-            ByteBuf b = ((MqttPublishMessage) msg).payload();
-            System.out.println(b.toString(CharsetUtil.UTF_8));
-        });
 
         client.subscribe(cmd, MqttQoS.AT_LEAST_ONCE);
         client.publish(topic, MqttQoS.AT_LEAST_ONCE, false, "{\"id\":\"client connect\",\"content\":\"I am in!\"}");
