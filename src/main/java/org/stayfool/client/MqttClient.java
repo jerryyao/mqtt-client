@@ -323,7 +323,6 @@ public class MqttClient {
             ChannelUtil.clientId(channel, option.clientId());
         } catch (InterruptedException e) {
             log.error("init channel failed", e);
-            exit();
         }
     }
 
@@ -391,9 +390,5 @@ public class MqttClient {
         } catch (InterruptedException e) {
             log.error("sync {} failed, cause : {} ", event, e);
         }
-    }
-
-    private void exit() {
-        System.exit(-1);
     }
 }
