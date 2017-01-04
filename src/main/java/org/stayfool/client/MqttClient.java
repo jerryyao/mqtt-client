@@ -51,10 +51,11 @@ public class MqttClient {
     private static volatile Bootstrap shareBoot;
     private Bootstrap priBoot;
     private Channel channel;
-    private boolean isConnect;
+    private volatile boolean isConnect;
     private final MqttOption option;
 
     public MqttClient(MqttOption option) {
+
         if (option == null || !option.validate())
             throw new IllegalArgumentException();
         this.option = option;
@@ -64,6 +65,7 @@ public class MqttClient {
      * connect to server
      */
     public void connect() {
+
         initBoot();
         initChannel();
         doConnect();
@@ -76,16 +78,18 @@ public class MqttClient {
      * @param qos   qos
      */
     public void subscribe(String topic, MqttQoS qos) {
+
         subscribe(new String[]{topic}, qos);
     }
 
     /**
      * subscribe topics
      *
-     * @param filters 主题表达式
+     * @param filters 主题
      * @param qos     qos
      */
     public void subscribe(String[] filters, MqttQoS qos) {
+
         checkConnect();
 
         List<MqttTopicSubscription> topicList = new ArrayList<>();
@@ -115,6 +119,7 @@ public class MqttClient {
      * @param contect 消息内容
      */
     public void publish(String topic, MqttQoS qos, boolean retain, String contect) {
+
         checkConnect();
 
         MqttFixedHeader fixedHeader = new MqttFixedHeader(
@@ -148,15 +153,17 @@ public class MqttClient {
      * @param topic 主题
      */
     public void unsubscribe(String topic) {
+
         unsubscribe(new String[]{topic});
     }
 
     /**
      * cancel some subscription
      *
-     * @param filters 主题表达式
+     * @param filters 主题
      */
     public void unsubscribe(String[] filters) {
+
         checkConnect();
         MqttFixedHeader fixedHeader = FixHeaderUtil.from(MqttMessageType.UNSUBSCRIBE);
         MqttMessageIdVariableHeader variableHeader = MqttMessageIdVariableHeader.from(IDUtil.nextAvailableId(option.clientId()));
@@ -177,6 +184,7 @@ public class MqttClient {
      * disconnect with server
      */
     public void disconnect() {
+
         checkConnect();
         sendMessage(new MqttMessage(FixHeaderUtil.from(MqttMessageType.DISCONNECT)));
         SessionManager.removeSession(option.clientId());
@@ -189,6 +197,7 @@ public class MqttClient {
      * @return isConnect
      */
     public boolean isConnect() {
+
         return isConnect;
     }
 
@@ -198,6 +207,7 @@ public class MqttClient {
      * @return clientId
      */
     public String getClientId() {
+
         return option.clientId();
     }
 
@@ -208,6 +218,7 @@ public class MqttClient {
      * @param type     type {@code EventType}
      */
     public void addCallback(EventType type, EventCallback callback) {
+
         EventManager.register(new EventKey(type, option.clientId()), callback);
     }
 
@@ -217,6 +228,7 @@ public class MqttClient {
      * @param type {@code EventType}
      */
     public void removeCallback(EventType type) {
+
         EventManager.unregister(new EventKey(type, option.clientId()));
     }
 
@@ -226,10 +238,12 @@ public class MqttClient {
      * @return {@link MqttOption}
      */
     public MqttOption option() {
+
         return option;
     }
 
     public void close() {
+
         if (isConnect)
             disconnect();
         if (!option.shareBoot() || clientCount.get() == 1) {
@@ -241,6 +255,7 @@ public class MqttClient {
     }
 
     private void doConnect() {
+
         MqttFixedHeader fixedHeader = FixHeaderUtil.from(MqttMessageType.CONNECT);
         MqttConnectVariableHeader variableHeader = new MqttConnectVariableHeader(
                 MqttVersion.MQTT_3_1_1.protocolName(),
@@ -269,6 +284,8 @@ public class MqttClient {
         isConnect = true;
 
         SessionManager.createSession(option.clientId());
+
+        addCallback(EventType.DIS_CONNECT, message -> this.isConnect = false);
     }
 
     private void initBoot() {
@@ -294,6 +311,7 @@ public class MqttClient {
     }
 
     private Bootstrap createBoot() {
+
         NioEventLoopGroup workerGroup = new NioEventLoopGroup();
         Bootstrap boot = new Bootstrap();
         boot.group(workerGroup);
@@ -302,6 +320,7 @@ public class MqttClient {
         boot.handler(new ChannelInitializer<SocketChannel>() {
             @Override
             public void initChannel(SocketChannel ch) throws Exception {
+
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addFirst(new HeartBeatHandler());
                 pipeline.addFirst(new IdleStateHandler(0, 0, option.keepAlive()));
@@ -318,6 +337,7 @@ public class MqttClient {
     }
 
     private void initChannel() {
+
         try {
             channel = priBoot.connect(option.host(), option.port()).sync().channel();
             ChannelUtil.clientId(channel, option.clientId());
@@ -375,14 +395,17 @@ public class MqttClient {
     }
 
     private void checkConnect() {
+
         assert isConnect;
     }
 
     private void sendMessage(MqttMessage msg) {
+
         channel.writeAndFlush(msg);
     }
 
     private void sync(EventKey event) {
+
         final CountDownLatch connectLatch = new CountDownLatch(1);
         EventManager.register(event, (msg) -> connectLatch.countDown());
         try {
