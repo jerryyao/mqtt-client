@@ -8,7 +8,7 @@
 -   如果需要创建大量的客户端，只需指定不同的clientId即可
 
 -   DEMO
-```
+```java
     MqttClientOption option = MqttClientOption.instance().host("localhost").port(1883).clientId("client1");
     //client 1
     MqttClient client1 = new MqttClient(option);
