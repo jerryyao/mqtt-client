@@ -3,7 +3,10 @@ package org.stayfool.client;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -25,10 +28,11 @@ import org.stayfool.client.util.FixHeaderUtil;
 import org.stayfool.client.util.IDUtil;
 
 import javax.net.ssl.*;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -355,15 +359,17 @@ public class MqttClient {
         KeyManagerFactory kmf = null;
         InputStream is = null;
 
-        if (option.keyPath().startsWith("classpath:")) {
-            ClassLoader cl = Thread.currentThread().getContextClassLoader();
-            String keyPath = option.keyPath().replace("classpath:", "");
-            is = cl.getResourceAsStream(keyPath);
-        } else {
+        Path keypath = Paths.get(option.keyPath());
+        if (keypath.isAbsolute()) {
             try {
-                is = new FileInputStream(new File(option.keyPath()));
-            } catch (FileNotFoundException e) {
+                is = Files.newInputStream(Paths.get((option.keyPath())));
+            } catch (IOException e) {
+                log.error("load keys file failed", e);
             }
+        } else {
+            String keyPath = option.keyPath().replace("classpath:", "");
+            ClassLoader cl = Thread.currentThread().getContextClassLoader();
+            is = cl.getResourceAsStream(keyPath);
         }
 
         if (is == null) {

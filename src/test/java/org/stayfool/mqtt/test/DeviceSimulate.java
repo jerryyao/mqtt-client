@@ -28,7 +28,7 @@ public class DeviceSimulate {
     private String cmd = "cmd/1/1/" + deviceId;
 
     @Test
-    public void ssl() {
+    public void ssl() throws InterruptedException {
 //        System.setProperty("javax.net.debug", "all");
 
         MqttOption option = MqttOption.instance()
@@ -47,10 +47,10 @@ public class DeviceSimulate {
         client.connect();
 
         client.subscribe(cmd, MqttQoS.AT_LEAST_ONCE);
-        client.publish(topic, MqttQoS.AT_LEAST_ONCE, false, "{\"id\":\"client connect\",\"content\":\"I am in!\"}");
 
         while (true) {
-
+//            client.publish(topic, MqttQoS.AT_LEAST_ONCE, false, "{\"id\":\"client connect\",\"content\":\"I am in!\"}");
+            Thread.sleep(1000);
         }
     }
 }

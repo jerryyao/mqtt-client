@@ -13,11 +13,12 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * Created by stayfool on 2016/12/5.
  */
-public class MemorySession implements Session {
+public class MemorySession implements Session<Object, Object> {
 
     private String clientId;
     private ConcurrentMap<Integer, MqttMessage> waitingForConfirmMap = new ConcurrentHashMap<>();
     private ConcurrentMap<Integer, MqttPublishMessage> retainedMap = new ConcurrentHashMap<>();
+    private ConcurrentMap<Object, Object> attrMap = new ConcurrentHashMap<>();
 
     public MemorySession(String clientId) {
         this.clientId = clientId;
@@ -58,6 +59,16 @@ public class MemorySession implements Session {
         return new ArrayList<>(waitingForConfirmMap.values());
     }
 
+    @Override
+    public void set(Object key, Object value) {
+        attrMap.putIfAbsent(key, value);
+    }
+
+    @Override
+    public Object get(Object key) {
+        return attrMap.get(key);
+    }
+
     private int getId(MqttMessage msg) {
         Object vheader = msg.variableHeader();
         if (vheader instanceof MqttPublishVariableHeader)
@@ -65,4 +76,5 @@ public class MemorySession implements Session {
         else
             return ((MqttMessageIdVariableHeader) msg.variableHeader()).messageId();
     }
+
 }

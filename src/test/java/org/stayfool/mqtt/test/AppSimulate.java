@@ -28,7 +28,7 @@ public class AppSimulate {
     private String cmd = "cmd/1/1/" + deviceId;
 
     @Test
-    public void tetss() {
+    public void tetss() throws InterruptedException {
         MqttOption option = MqttOption.instance()
                 .clientId(clientId)
                 .port(1883).host("localhost")
@@ -43,10 +43,10 @@ public class AppSimulate {
         client.connect();
         client.subscribe(topic, MqttQoS.AT_LEAST_ONCE);
 
-        client.publish(cmd, MqttQoS.AT_LEAST_ONCE, false, "shutdown");
-
         while (true) {
+            client.publish(cmd, MqttQoS.AT_LEAST_ONCE, false, "shutdown");
 
+            Thread.sleep(1000);
         }
     }
 }
