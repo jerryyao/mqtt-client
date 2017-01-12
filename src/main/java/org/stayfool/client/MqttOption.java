@@ -2,6 +2,8 @@ package org.stayfool.client;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.netty.util.internal.StringUtil;
+import org.stayfool.client.session.MemorySession;
+import org.stayfool.client.session.Session;
 import org.stayfool.client.util.IDUtil;
 
 /**
@@ -31,6 +33,8 @@ public class MqttOption {
     private boolean willRetain = false;
     private String willTopic;
     private String willMessage;
+    private int messageTimeout = 30;
+    private Class<? extends Session> session = MemorySession.class;
 
     // SSL info
     private String keyPath;
@@ -102,6 +106,16 @@ public class MqttOption {
         return this;
     }
 
+    public MqttOption messageTimeout(int messageTimeout) {
+        this.messageTimeout = messageTimeout;
+        return this;
+    }
+
+    public MqttOption session(Class<? extends Session> session) {
+        this.session = session;
+        return this;
+    }
+
     public MqttOption keyPath(String keyPath) {
         this.keyPath = keyPath;
         return this;
@@ -167,6 +181,14 @@ public class MqttOption {
 
     public String willMessage() {
         return willMessage;
+    }
+
+    public int messageTimeout() {
+        return messageTimeout;
+    }
+
+    public Class<? extends Session> session() {
+        return session;
     }
 
     public String keyPath() {

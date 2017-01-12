@@ -2,6 +2,7 @@ package org.stayfool.client.session;
 
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
+import org.stayfool.client.MqttOption;
 
 import java.util.List;
 
@@ -16,6 +17,13 @@ public interface Session<K, V> {
      * @return clientId
      */
     String clientId();
+
+    /**
+     * 待确认消息超时时间
+     *
+     * @return int
+     */
+    int messageTimeout();
 
     /**
      * 保存消息
@@ -76,4 +84,11 @@ public interface Session<K, V> {
      * @return key对应的值
      */
     <V> V get(K key);
+
+    /**
+     * 配置session
+     *
+     * @param option configuration
+     */
+    void init(MqttOption option);
 }

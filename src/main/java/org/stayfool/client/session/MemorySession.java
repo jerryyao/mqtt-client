@@ -4,9 +4,15 @@ import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
+import org.stayfool.client.MqttOption;
+import org.stayfool.client.event.EventKey;
+import org.stayfool.client.event.EventManager;
+import org.stayfool.client.event.EventType;
+import org.stayfool.client.util.TimeOutMap;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -15,18 +21,14 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class MemorySession implements Session<Object, Object> {
 
-    private String clientId;
-    private ConcurrentMap<Integer, MqttMessage> waitingForConfirmMap = new ConcurrentHashMap<>();
+    private MqttOption option;
+    private TimeOutMap<Integer, MqttMessage> waitingForConfirmMap = new TimeOutMap<>();
     private ConcurrentMap<Integer, MqttPublishMessage> retainedMap = new ConcurrentHashMap<>();
     private ConcurrentMap<Object, Object> attrMap = new ConcurrentHashMap<>();
 
-    public MemorySession(String clientId) {
-        this.clientId = clientId;
-    }
-
     @Override
     public String clientId() {
-        return clientId;
+        return option.clientId();
     }
 
     @Override
@@ -77,4 +79,18 @@ public class MemorySession implements Session<Object, Object> {
             return ((MqttMessageIdVariableHeader) msg.variableHeader()).messageId();
     }
 
+    @Override
+    public int messageTimeout() {
+        return option.messageTimeout();
+    }
+
+    @Override
+    public void init(MqttOption option) {
+        Objects.requireNonNull(option);
+        waitingForConfirmMap = new TimeOutMap<>(option.messageTimeout(), (k, v, t) -> {
+            EventManager.notify(new EventKey(EventType.MESSAGE_TIMEOUT, option.clientId()), v);
+            confirmMessage(k);
+        });
+        this.option = option;
+    }
 }

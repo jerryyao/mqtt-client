@@ -1,5 +1,7 @@
 package org.stayfool.client.session;
 
+import org.stayfool.client.MqttOption;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -7,13 +9,22 @@ import java.util.concurrent.ConcurrentMap;
  * Created by stayfool on 2016/12/5.
  */
 public final class SessionManager {
+
+    private static MqttOption option;
+
     private SessionManager() {
+    }
+
+    public static void init(MqttOption option) {
+        SessionManager.option = option;
     }
 
     private static final ConcurrentMap<String, Session> sessionMap = new ConcurrentHashMap<>();
 
     /**
-     * 获取已存在的Session，不存在返回NULL
+     * 获取已存在的Session
+     * <p>
+     * 不存在则为当前 {@code clientId} 创建一个{@code Session}
      *
      * @param clientId clientId
      * @return Session
@@ -22,7 +33,17 @@ public final class SessionManager {
         if (sessionMap.containsKey(clientId))
             return sessionMap.get(clientId);
 
-        return null;
+        Session s = null;
+        try {
+            s = option.session().newInstance();
+        } catch (InstantiationException | IllegalAccessException e) {
+            //do nothing
+        }
+        if (s != null) {
+            s.init(option);
+            sessionMap.putIfAbsent(clientId, s);
+        }
+        return s;
     }
 
     /**
@@ -34,15 +55,4 @@ public final class SessionManager {
         sessionMap.remove(clientId);
     }
 
-    /**
-     * 为当前 {@code clientId} 创建一个{@code MemorySession}
-     *
-     * @param clientId clientId
-     * @return Seesion
-     */
-    public static Session createSession(String clientId) {
-        MemorySession session = new MemorySession(clientId);
-        sessionMap.putIfAbsent(clientId, session);
-        return session;
-    }
 }

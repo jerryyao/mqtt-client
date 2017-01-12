@@ -63,6 +63,7 @@ public class MqttClient {
         if (option == null || !option.validate())
             throw new IllegalArgumentException();
         this.option = option;
+        SessionManager.init(option);
     }
 
     /**
@@ -287,7 +288,7 @@ public class MqttClient {
 
         isConnect = true;
 
-        SessionManager.createSession(option.clientId());
+        SessionManager.getSession(option.clientId());
 
         addCallback(EventType.DIS_CONNECT, message -> this.isConnect = false);
     }
@@ -419,5 +420,6 @@ public class MqttClient {
         } catch (InterruptedException e) {
             log.error("sync {} failed, cause : {} ", event, e);
         }
+        EventManager.unregister(event);
     }
 }

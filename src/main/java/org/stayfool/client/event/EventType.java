@@ -18,5 +18,7 @@ public enum EventType {
 
     MESSAGE_ARRIVE,
 
-    UNSUBSCRIBE_SUCCESS
+    UNSUBSCRIBE_SUCCESS,
+
+    MESSAGE_TIMEOUT;
 }
