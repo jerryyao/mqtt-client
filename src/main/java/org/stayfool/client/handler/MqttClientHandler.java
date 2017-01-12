@@ -64,6 +64,9 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
 
     private void processConnAck(ChannelHandlerContext ctx, MqttConnAckMessage message) {
 
+        EventManager.notify(new EventKey(EventType.CONNECT_COMPLETE, ChannelUtil.clientId(ctx.channel())), message);
+        log.debug("{} connect complete", ChannelUtil.clientId(ctx.channel()));
+
         if (message.variableHeader().connectReturnCode().equals(MqttConnectReturnCode.CONNECTION_ACCEPTED)) {
             EventManager.notify(new EventKey(EventType.CONNECT_SUCCESS, ChannelUtil.clientId(ctx.channel())), message);
             log.debug("{} connect success", ChannelUtil.clientId(ctx.channel()));
@@ -124,6 +127,8 @@ public class MqttClientHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void processSubAck(ChannelHandlerContext ctx, MqttSubAckMessage message) {
+        EventManager.notify(new EventKey(EventType.SUBSCRIBE_COMPLETE, ChannelUtil.clientId(ctx.channel())), message);
+        log.debug("subscribe complete : {} ", ChannelUtil.clientId(ctx.channel()));
         boolean success = true;
         if (message.payload().grantedQoSLevels().isEmpty())
             success = false;

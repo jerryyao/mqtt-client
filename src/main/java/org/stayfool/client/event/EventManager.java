@@ -35,13 +35,13 @@ public class EventManager {
 
     @SuppressWarnings("unchecked")
     public static void notify(EventKey key, Object msg) {
-        log.debug("notify event {}", key);
         if (!callbackMap.containsKey(key)) {
             return;
         }
 
         List<EventCallback> callbackList = callbackMap.get(key);
         callbackList.forEach(call -> executor.execute(() -> call.callback(msg)));
+        log.debug("event {} notified", key);
     }
 
 }
